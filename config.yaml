@@ -1,0 +1,82 @@
+# All experiment settings live here. Code must read from this file, never hardcode.
+
+seed: 42
+
+paths:
+  raw_instances: data/raw_instances
+  real_graphs: data/real_graphs
+  dataset: data/dataset.csv
+  results: results
+
+# ---------------------------------------------------------------- graph generation
+generation:
+  sizes: [100, 250, 500, 1000, 2500, 5000]   # number of nodes
+  graphs_per_setting: 10                     # graphs per (family, size, params, weights)
+  queries_per_graph: 10                      # (source, target) pairs, same component only
+  weight_distributions:
+    unit: {}                                    # builds an UNWEIGHTED graph (BFS applicable)
+    uniform: {low: 1.0, high: 100.0}
+    heavy_tailed: {shape: 1.5, scale: 1.0}      # Pareto: scale * (1 + Lomax(shape))
+    euclidean: {noise: 0.3}                     # edge length * U(1, 1 + noise); coords only
+  # Each family: parameter grid (every combination is used) and the weight
+  # distributions applied to it. Coordinate families use length-based weights so that
+  # the A* heuristic is meaningful (as on road networks).
+  families:
+    erdos_renyi:
+      params: {avg_degree: [3, 6, 12]}
+      weights: [unit, uniform, heavy_tailed]
+    barabasi_albert:
+      params: {m: [1, 3, 6]}
+      weights: [unit, uniform, heavy_tailed]
+    watts_strogatz:
+      params: {k: [4, 8], p: [0.01, 0.1, 0.3]}
+      weights: [unit, uniform, heavy_tailed]
+    grid_2d:
+      params: {obstacle_fraction: [0.0, 0.1, 0.25]}   # n = side^2 before obstacles
+      weights: [unit, euclidean]
+    random_geometric:
+      params: {avg_degree: [4, 8, 12]}                # unit square, radius from avg_degree
+      weights: [unit, euclidean]
+
+# ---------------------------------------------------------------- algorithms
+algorithms:
+  candidates: [dijkstra, bidirectional_dijkstra, astar, bfs, bidirectional_bfs]
+  default: dijkstra                 # safe fallback and probing algorithm
+  requires_coordinates: [astar]
+  unweighted_only: [bfs, bidirectional_bfs]
+
+# ---------------------------------------------------------------- timing
+benchmark:
+  out_dir: data/bench               # one CSV per graph (resumable), merged into dataset.csv
+  cpus: [10, 12, 14]                # logical CPUs to pin workers to, one worker per CPU;
+                                    # empty = one unpinned worker. Use `--calibrate` and pick
+                                    # cores of ONE type (P-cores) on separate physical cores.
+                                    # Core Ultra 5 125H: P-cores = physical 0,10,12,14 (one
+                                    # logical CPU each used; core 0 left for the OS).
+  require_ac_power: true            # refuse to time on battery (throttling)
+  warmup_runs: 2
+  repeats: 7                        # median of these is the label
+  tie_threshold_rel: 0.05           # best two within 5% => tie
+  cost_rel_tolerance: 1.0e-9        # all algorithms must agree on path cost (relative)
+
+# ---------------------------------------------------------------- features
+features:
+  tiers:
+    0: [n_nodes, n_edges, density, is_weighted, has_coordinates]
+    1: [deg_mean, deg_var, deg_max, deg_entropy, w_min, w_max, w_mean, w_std]
+    2: [clustering_est, diameter_est]
+    3: [diameter_exact, clustering_exact, spectral_radius, spectral_gap]
+  tier2:
+    clustering_sample_size: 200
+    diameter_bfs_sweeps: 4
+  cost_report_graphs_per_cell: 2    # graphs per (family, size) in the tier-cost report
+  probe:
+    k_values: [16, 64, 256]         # node-expansion budgets to try
+    default_k: 64
+
+# ---------------------------------------------------------------- modelling
+model:
+  test_fraction: 0.2                # group split by graph_id
+  cv_folds: 5
+  conformal_coverage: [0.8, 0.9, 0.95]
+  label_balance_max: 0.80           # warn if one algorithm wins more than this

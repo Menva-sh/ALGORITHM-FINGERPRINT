@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Generated graph instances: reproducible from config.yaml (python -m src.generators)
+data/raw_instances/*
+!data/raw_instances/.gitkeep
+
+# Per-graph benchmark outputs: merged into data/dataset.csv (kept, since timings are
+# machine-specific and not exactly reproducible). Run info (CPU, power state) is kept.
+data/bench/*
+!data/bench/run_info_*.json
+*.tmp*

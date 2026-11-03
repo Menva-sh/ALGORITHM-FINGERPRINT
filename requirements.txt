@@ -1,0 +1,13 @@
+numpy
+pandas
+scipy
+scikit-learn
+networkx
+shap
+umap-learn
+matplotlib
+pytest
+pyyaml
+psutil
+streamlit
+# optional: osmnx (real road networks), mapie (conformal; we may hand-write it instead)
