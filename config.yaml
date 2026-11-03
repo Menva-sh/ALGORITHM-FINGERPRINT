@@ -76,7 +76,16 @@ features:
 
 # ---------------------------------------------------------------- modelling
 model:
+  label: best_time                  # or best_ops (op-count labels)
+  feature_tiers: [0]                # main feature set: Tier-1 costs ~11x the max possible
+                                    # saving per query (Stage 5 finding); Stage 6 compares all
+  comparison_tiers: [[0, 1]]        # extra tier sets evaluated and saved for comparison
   test_fraction: 0.2                # group split by graph_id
   cv_folds: 5
+  inference_timing_samples: 200     # single-row predictions timed per model
+  plain_tree: {max_depth: 6}        # decision tree evaluated in plain Python
+  rf: {n_estimators: 100, min_samples_leaf: 1}
+  svm: {C: 10.0, gamma: scale}
+  mlp: {hidden_layer_sizes: [64, 32], max_iter: 500}
   conformal_coverage: [0.8, 0.9, 0.95]
   label_balance_max: 0.80           # warn if one algorithm wins more than this
