@@ -102,11 +102,12 @@ def add_savings(table: pd.DataFrame, run_all_s: float) -> pd.DataFrame:
 
 # ------------------------------------------------------------------ experiment
 
-def evaluate(df: pd.DataFrame, cfg: dict[str, Any],
-             tiers: list[int] | None = None) -> dict[str, pd.DataFrame]:
+def evaluate(df: pd.DataFrame, cfg: dict[str, Any], tiers: list[int] | None = None,
+             model_names: list[str] | None = None, cv: bool = True) -> dict[str, Any]:
     """Train on train graphs, evaluate all methods on test graphs, CV on train graphs.
 
-    tiers defaults to model.feature_tiers.
+    tiers defaults to model.feature_tiers; model_names restricts the selectors trained
+    (default: all); cv=False skips cross-validation.
     """
     m = cfg["model"]
     candidates = cfg["algorithms"]["candidates"]
@@ -134,6 +135,8 @@ def evaluate(df: pd.DataFrame, cfg: dict[str, Any],
 
     fitted = {}
     for name, model in build_models(cfg).items():
+        if model_names is not None and name not in model_names:
+            continue
         model.fit(X[train], y[train])
         fitted[name] = model
         infer = inference_ns(model, X[test], mt, candidates, m["inference_timing_samples"],
@@ -155,11 +158,12 @@ def evaluate(df: pd.DataFrame, cfg: dict[str, Any],
     return {
         "holdout": table,
         "cv": cross_validate(X[train], y[train], df["graph_id"].to_numpy()[train],
-                             T[train], mask[train], label_idx[train], cfg),
+                             T[train], mask[train], label_idx[train], cfg) if cv else None,
         "by_group": breakdown(df.iloc[test], choices, Tt, label_idx[test], tie,
                               feat[test], fitted, cfg),
         "_choices": pd.DataFrame({k: v for k, v in choices.items()}),
         "_test_labels": pd.Series(label_idx[test]),
+        "_test_index": test,
     }
 
 
@@ -191,7 +195,8 @@ def breakdown(test_df: pd.DataFrame, choices: dict[str, np.ndarray], T: np.ndarr
         for value, idx in test_df.reset_index(drop=True).groupby(by).groups.items():
             idx = np.asarray(idx)
             z = np.zeros(len(idx))
-            for name in ["plain_tree", "random_forest", "best_fixed", "oracle"]:
+            for name in [n for n in ["plain_tree", "random_forest", "best_fixed", "oracle"]
+                         if n in choices]:
                 f = feat[idx] if name in fitted else z
                 met = choice_metrics(choices[name][idx], T[idx], label_idx[idx], f, z, 0.0, tie)
                 out.append({"group_by": by, "group": value, "method": name, "queries": len(idx),

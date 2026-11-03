@@ -89,3 +89,9 @@ model:
   mlp: {hidden_layer_sizes: [64, 32], max_iter: 500}
   conformal_coverage: [0.8, 0.9, 0.95]
   label_balance_max: 0.80           # warn if one algorithm wins more than this
+
+# ---------------------------------------------------------------- experiments
+experiments:
+  tiers:                            # Stage 6: cost-aware feature tiers
+    tier_sets: [[0], [0, 1], [0, 1, 2], [0, 1, 2, 3]]
+    models: [plain_tree, random_forest]
