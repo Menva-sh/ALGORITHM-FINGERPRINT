@@ -126,6 +126,10 @@ experiments:
   labels:                           # Stage 9: wall-clock vs op-count labels
     models: [plain_tree, random_forest]
     second_machine_dataset: null    # path to a dataset.csv timed on another machine
+  algorithm_map:                    # Stage 10: UMAP of fingerprints (demo page 2)
+    tiers: [0, 1, 2, 3]
+    n_neighbors: 15
+    min_dist: 0.1
 
 # ---------------------------------------------------------------- profiles
 # Overrides applied with --profile <name> (generators, benchmark, probe).

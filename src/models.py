@@ -59,6 +59,7 @@ class PlainTreeSelector(ClassifierMixin, BaseEstimator):
     def fit(self, X: np.ndarray, y: np.ndarray) -> "PlainTreeSelector":
         tree = DecisionTreeClassifier(max_depth=self.max_depth, random_state=self.random_state)
         tree.fit(X, y)
+        self.tree_ = tree  # kept for explanations (SHAP); choose() never uses it
         self.classes_ = tree.classes_
         t = tree.tree_
         self._left = t.children_left.tolist()
