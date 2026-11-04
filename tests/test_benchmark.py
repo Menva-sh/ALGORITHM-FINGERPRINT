@@ -23,6 +23,7 @@ def fast_cfg() -> dict:
     cfg = copy.deepcopy(CFG)
     cfg["benchmark"]["warmup_runs"] = 1
     cfg["benchmark"]["repeats"] = 3
+    cfg["benchmark"]["require_ac_power"] = False  # tests must not wait for a charger
     cfg["generation"]["queries_per_graph"] = 3
     return cfg
 
@@ -154,3 +155,30 @@ def test_label_report_and_balance_check() -> None:
     assert report["noise"].loc["dijkstra", "share_over_10pct"] == pytest.approx(0.25)
     assert balance_check(df, 0.80) == (True, "dijkstra", pytest.approx(0.8))
     assert balance_check(df, 0.70)[0] is False
+
+
+# ------------------------------------------------------------------ power guard
+
+def test_timed_on_ac_redoes_work_when_power_is_lost(monkeypatch) -> None:
+    cfg = copy.deepcopy(CFG)
+    cfg["benchmark"]["require_ac_power"] = True
+    states = iter([True, False, True, True])  # before, after (lost!), before, after
+    monkeypatch.setattr(bm, "on_ac_power", lambda: next(states))
+    calls = []
+    assert bm.timed_on_ac(cfg, "t", lambda: calls.append(1) or len(calls)) == 2
+    assert len(calls) == 2
+
+
+def test_power_guard_off_never_checks(monkeypatch) -> None:
+    cfg = copy.deepcopy(CFG)
+    cfg["benchmark"]["require_ac_power"] = False
+    monkeypatch.setattr(bm, "on_ac_power", lambda: (_ for _ in ()).throw(AssertionError))
+    assert bm.timed_on_ac(cfg, "t", lambda: 7) == 7
+
+
+def test_worker_rows_record_power_state(tmp_path) -> None:
+    cfg = fast_cfg()
+    spec = InstanceSpec("erdos_renyi", 60, (("avg_degree", 3),), "unit", 0)
+    path = save_instance(build_instance(spec, cfg), tmp_path / "raw")
+    bm.run_worker([path], tmp_path / "out", cfg, cpu=None, verbose=False)
+    assert "ac_power" in pd.read_csv(tmp_path / "out" / f"{path.stem}.csv")

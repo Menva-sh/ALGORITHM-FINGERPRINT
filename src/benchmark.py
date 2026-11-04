@@ -114,7 +114,8 @@ def benchmark_graph(path: Path, cfg: dict[str, Any], cpu: int = -1) -> pd.DataFr
     candidates = cfg["algorithms"]["candidates"]
     g, queries, meta = load_instance(path)
     gid = meta["graph_id"]
-    fp = extract(g, cfg=cfg, seed=derive_seed(cfg["seed"], gid + ":features"))
+    tiers = bcfg.get("feature_tiers", sorted(cfg["features"]["tiers"]))
+    fp = extract(g, tiers=tiers, cfg=cfg, seed=derive_seed(cfg["seed"], gid + ":features"))
     algos = applicable_algorithms(g)
     rng = random.Random(derive_seed(cfg["seed"], gid + ":timing"))
 
@@ -169,6 +170,26 @@ def pin_to_cpu(cpu: int | None) -> None:
         psutil.Process().cpu_affinity([cpu])
 
 
+def wait_for_ac(cfg: dict[str, Any], label: str, poll_s: float = 15.0) -> None:
+    """Block while on battery (if benchmark.require_ac_power); timings must not mix power states."""
+    if not cfg["benchmark"]["require_ac_power"] or on_ac_power():
+        return
+    print(f"[{label}] on battery: paused until AC power returns", flush=True)
+    while not on_ac_power():
+        time.sleep(poll_s)
+    print(f"[{label}] AC power back: resuming", flush=True)
+
+
+def timed_on_ac(cfg: dict[str, Any], label: str, work: Any) -> Any:
+    """Run work() with AC power before AND after; redo it if power was lost meanwhile."""
+    while True:
+        wait_for_ac(cfg, label)
+        result = work()
+        if not cfg["benchmark"]["require_ac_power"] or on_ac_power():
+            return result
+        print(f"[{label}] power lost during measurement: discarding and redoing", flush=True)
+
+
 def run_worker(paths: list[Path], out_dir: Path, cfg: dict[str, Any], cpu: int | None,
                verbose: bool = True) -> None:
     """Benchmark the given instances on one (optionally pinned) CPU; atomic per-graph writes."""
@@ -179,7 +200,9 @@ def run_worker(paths: list[Path], out_dir: Path, cfg: dict[str, Any], cpu: int |
         if final.exists():
             continue
         start = time.time()
-        df = benchmark_graph(path, cfg, cpu=-1 if cpu is None else cpu)
+        df = timed_on_ac(cfg, f"cpu {cpu}",
+                         lambda: benchmark_graph(path, cfg, cpu=-1 if cpu is None else cpu))
+        df["ac_power"] = on_ac_power()
         tmp = final.with_suffix(f".tmp{os.getpid()}")
         df.to_csv(tmp, index=False)
         os.replace(tmp, final)
@@ -275,9 +298,12 @@ def main() -> None:
     parser.add_argument("--merge-only", action="store_true")
     parser.add_argument("--calibrate", action="store_true")
     parser.add_argument("--allow-battery", action="store_true")
+    parser.add_argument("--profile", help="config profile, e.g. large")
     args = parser.parse_args()
 
-    cfg = load_config()
+    cfg = load_config(profile=args.profile)
+    if args.allow_battery:
+        cfg["benchmark"]["require_ac_power"] = False  # workers then neither wait nor redo
     raw_dir = PROJECT_ROOT / cfg["paths"]["raw_instances"]
     out_dir = PROJECT_ROOT / cfg["benchmark"]["out_dir"]
     dataset = PROJECT_ROOT / cfg["paths"]["dataset"]

@@ -115,3 +115,29 @@ experiments:
     perm_repeats: 5
     corr_threshold: 0.8             # |Spearman| >= this puts features in one group
     distill_depth: 3                # depth of the rule tree distilled from the forest
+  size_shift:                       # Stage 9: train on small graphs, test on larger ones
+    small_max: 500                  # train on n_target <= this (main dataset)
+    large_min: 2500                 # test on n_target >= this (main dataset)
+    feature_sets:                   # static tiers, optionally + probe features of budget k
+      - {tiers: [0]}
+      - {tiers: [0, 1]}
+      - {tiers: [0], probe_k: 64}
+    models: [plain_tree, random_forest]
+  labels:                           # Stage 9: wall-clock vs op-count labels
+    models: [plain_tree, random_forest]
+    second_machine_dataset: null    # path to a dataset.csv timed on another machine
+
+# ---------------------------------------------------------------- profiles
+# Overrides applied with --profile <name> (generators, benchmark, probe).
+profiles:
+  large:                            # much larger graphs for the size-shift test
+    paths: {raw_instances: data/raw_instances_large, dataset: data/dataset_large.csv}
+    generation: {sizes: [20000], graphs_per_setting: 2}   # 4x the largest training graph;
+                                    # 50k dropped: ~3x the benchmark time for one more point
+    benchmark: {out_dir: data/bench_large, feature_tiers: [0, 1, 2]}  # exact Tier-3 too slow
+    features: {probe: {out: data/probes_large.csv}}
+  real:                             # real graphs (testing only), from data/real_graphs
+    paths: {raw_instances: data/raw_instances_real, dataset: data/dataset_real.csv}
+    generation: {queries_per_graph: 100}
+    benchmark: {out_dir: data/bench_real, feature_tiers: [0, 1, 2]}
+    features: {probe: {out: data/probes_real.csv}}

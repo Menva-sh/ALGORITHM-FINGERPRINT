@@ -102,35 +102,39 @@ def add_savings(table: pd.DataFrame, run_all_s: float) -> pd.DataFrame:
 
 # ------------------------------------------------------------------ experiment
 
-def evaluate(df: pd.DataFrame, cfg: dict[str, Any], tiers: list[int] | None = None,
-             model_names: list[str] | None = None, cv: bool = True,
-             extra_features: list[str] | None = None,
-             extra_cost_col: str | None = None) -> dict[str, Any]:
-    """Train on train graphs, evaluate all methods on test graphs, CV on train graphs.
+def _arrays(df: pd.DataFrame, cfg: dict[str, Any], tiers: list[int],
+            extra_features: list[str] | None, extra_cost_col: str | None,
+            train_label: str, eval_label: str | None = None) -> dict[str, np.ndarray]:
+    """Features, labels, times, masks and feature costs as arrays aligned with df rows.
 
-    tiers defaults to model.feature_tiers; model_names restricts the selectors trained
-    (default: all); cv=False skips cross-validation. extra_features / extra_cost_col add
-    PER-QUERY features (e.g. probes) and their cost column (ns); that cost is charged in
-    full to its query and never amortised over the graph.
+    y holds the TRAINING labels; label_idx the labels accuracy is measured against.
     """
-    m = cfg["model"]
     candidates = cfg["algorithms"]["candidates"]
-    tiers = m["feature_tiers"] if tiers is None else tiers
-    tie = cfg["benchmark"]["tie_threshold_rel"]
     cols = feature_columns(df, cfg, tiers) + list(extra_features or [])
-    X = df[cols].to_numpy(dtype=float)
-    y = df[m["label"]].to_numpy()
-    label_idx = np.array([candidates.index(a) for a in y])
-    T = time_matrix(df, candidates)
-    mask = applicability_mask(df, candidates)
     graph_feat = feature_cost_ns(df, tiers)
     query_feat = (df[extra_cost_col].to_numpy(dtype=float) if extra_cost_col
                   else np.zeros(len(df)))
-    feat = graph_feat + query_feat
-    feat_amortised = (graph_feat / df.groupby("graph_id")["graph_id"].transform("size")
-                      .to_numpy() + query_feat)
+    queries_per_graph = df.groupby("graph_id")["graph_id"].transform("size").to_numpy()
+    return {
+        "X": df[cols].to_numpy(dtype=float),
+        "y": df[train_label].to_numpy(),
+        "label_idx": np.array([candidates.index(a) for a in df[eval_label or train_label]]),
+        "T": time_matrix(df, candidates),
+        "mask": applicability_mask(df, candidates),
+        "feat": graph_feat + query_feat,
+        "feat_amortised": graph_feat / queries_per_graph + query_feat,
+    }
 
-    train, test = split_by_graph(df, m["test_fraction"], cfg["seed"])
+
+def _score_split(a: dict[str, np.ndarray], train: np.ndarray, test: np.ndarray,
+                 cfg: dict[str, Any], model_names: list[str] | None
+                 ) -> tuple[pd.DataFrame, dict[str, np.ndarray], dict[str, Any]]:
+    """Fit selectors on train rows; score selectors and baselines on test rows."""
+    m = cfg["model"]
+    candidates = cfg["algorithms"]["candidates"]
+    tie = cfg["benchmark"]["tie_threshold_rel"]
+    X, y, label_idx, T, mask = a["X"], a["y"], a["label_idx"], a["T"], a["mask"]
+    feat, feat_amortised = a["feat"], a["feat_amortised"]
     Tt, mt = T[test], mask[test]
     zeros = np.zeros(len(test))
     rows: dict[str, dict[str, float]] = {}
@@ -162,6 +166,48 @@ def evaluate(df: pd.DataFrame, cfg: dict[str, Any], tiers: list[int] | None = No
     table = add_savings(pd.DataFrame(rows).T, run_all_s)
     table.loc["run_all", ["search_s", "net_s", "net_amortised_s"]] = run_all_s
     table.attrs["best_fixed"] = candidates[fixed]
+    return table, choices, fitted
+
+
+def train_test_evaluate(train_df: pd.DataFrame, test_df: pd.DataFrame, cfg: dict[str, Any],
+                        tiers: list[int], model_names: list[str] | None = None,
+                        train_label: str | None = None, eval_label: str | None = None,
+                        extra_features: list[str] | None = None,
+                        extra_cost_col: str | None = None) -> dict[str, Any]:
+    """Fit on ALL rows of train_df, evaluate on ALL rows of test_df (distribution shift).
+
+    The best fixed algorithm is chosen on train_df. Graph ids must not overlap.
+    """
+    if set(train_df["graph_id"]) & set(test_df["graph_id"]):
+        raise ValueError("train and test share graphs")
+    both = pd.concat([train_df, test_df], ignore_index=True)
+    label = train_label or cfg["model"]["label"]
+    a = _arrays(both, cfg, tiers, extra_features, extra_cost_col, label, eval_label)
+    train = np.arange(len(train_df))
+    test = np.arange(len(train_df), len(both))
+    table, choices, _ = _score_split(a, train, test, cfg, model_names)
+    return {"holdout": table, "_choices": pd.DataFrame(choices)}
+
+
+def evaluate(df: pd.DataFrame, cfg: dict[str, Any], tiers: list[int] | None = None,
+             model_names: list[str] | None = None, cv: bool = True,
+             extra_features: list[str] | None = None,
+             extra_cost_col: str | None = None) -> dict[str, Any]:
+    """Train on train graphs, evaluate all methods on test graphs, CV on train graphs.
+
+    tiers defaults to model.feature_tiers; model_names restricts the selectors trained
+    (default: all); cv=False skips cross-validation. extra_features / extra_cost_col add
+    PER-QUERY features (e.g. probes) and their cost column (ns); that cost is charged in
+    full to its query and never amortised over the graph.
+    """
+    m = cfg["model"]
+    tiers = m["feature_tiers"] if tiers is None else tiers
+    a = _arrays(df, cfg, tiers, extra_features, extra_cost_col, m["label"])
+    train, test = split_by_graph(df, m["test_fraction"], cfg["seed"])
+    table, choices, fitted = _score_split(a, train, test, cfg, model_names)
+    X, y, label_idx, T, mask, feat = a["X"], a["y"], a["label_idx"], a["T"], a["mask"], a["feat"]
+    Tt = T[test]
+    tie = cfg["benchmark"]["tie_threshold_rel"]
 
     return {
         "holdout": table,

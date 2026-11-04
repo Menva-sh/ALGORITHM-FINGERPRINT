@@ -1,10 +1,10 @@
 Rules distilled from the random forest (T0+1+2+3 features)
-fidelity to the forest on test queries: 0.917
+fidelity to the forest on test queries: 0.911
 
 IF w_max <= 6.407 AND has_coordinates = 0 AND n_nodes <= 175 THEN bfs   [970 training queries, 58% of them labelled bfs by the forest]
 IF w_max <= 6.407 AND has_coordinates = 0 AND n_nodes > 175 THEN bidirectional_bfs   [4800 training queries, 95% of them labelled bidirectional_bfs by the forest]
-IF w_max <= 6.407 AND has_coordinates = 1 AND w_std <= 0.004406 THEN bfs   [2890 training queries, 61% of them labelled bfs by the forest]
-IF w_max <= 6.407 AND has_coordinates = 1 AND w_std > 0.004406 THEN astar   [2900 training queries, 97% of them labelled astar by the forest]
+IF w_max <= 6.407 AND has_coordinates = 1 AND w_std <= 0.002193 THEN bfs   [2880 training queries, 61% of them labelled bfs by the forest]
+IF w_max <= 6.407 AND has_coordinates = 1 AND w_std > 0.002193 THEN astar   [2910 training queries, 97% of them labelled astar by the forest]
 IF w_max > 6.407 AND spectral_radius <= 4.047 AND deg_entropy <= 0.3466 THEN dijkstra   [360 training queries, 81% of them labelled dijkstra by the forest]
 IF w_max > 6.407 AND spectral_radius <= 4.047 AND deg_entropy > 0.3466 THEN bidirectional_dijkstra   [100 training queries, 100% of them labelled bidirectional_dijkstra by the forest]
 IF w_max > 6.407 AND spectral_radius > 4.047 AND clustering_exact <= 0.628 THEN bidirectional_dijkstra   [10840 training queries, 99% of them labelled bidirectional_dijkstra by the forest]

@@ -17,3 +17,20 @@ data/bench/*
 
 # Probe run log (probes themselves are kept: data/probes.csv)
 data/probes_run.log
+
+# Stage 9 profiles: instances are regenerable (large) or rebuilt from data/real_graphs
+# (real); per-graph benchmark files are merged into data/dataset_{large,real}.csv (kept).
+data/raw_instances_large/
+data/raw_instances_real/
+data/bench_large/*
+data/bench_real/*
+!data/bench_large/run_info_*.json
+!data/bench_real/run_info_*.json
+# Raw downloads (the converted .edges/.coords files in data/real_graphs are kept)
+data/real_graphs/downloads/
+
+# Log of the last full results regeneration
+results/regen.log
+
+# osmnx HTTP cache
+cache/

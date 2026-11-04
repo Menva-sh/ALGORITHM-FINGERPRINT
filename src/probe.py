@@ -119,13 +119,14 @@ def probe_graph(path: Path, k_values: list[int], repeats: int) -> list[dict[str,
 
 def run_worker(paths: list[Path], out_file: Path, cfg: dict[str, Any], cpu: int | None) -> None:
     """Probe the given instances on one (optionally pinned) CPU; one CSV per worker."""
-    from src.benchmark import pin_to_cpu
+    from src.benchmark import pin_to_cpu, timed_on_ac
 
     pin_to_cpu(cpu)
     p = cfg["features"]["probe"]
     rows = []
     for i, path in enumerate(paths):
-        rows += probe_graph(path, p["k_values"], p["repeats"])
+        rows += timed_on_ac(cfg, f"cpu {cpu}",
+                            lambda: probe_graph(path, p["k_values"], p["repeats"]))
         if (i + 1) % 200 == 0:
             print(f"[cpu {cpu}] {i + 1}/{len(paths)}", flush=True)
     pd.DataFrame(rows).to_csv(out_file, index=False)
@@ -136,9 +137,12 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Compute probe features for all queries.")
     parser.add_argument("--allow-battery", action="store_true")
+    parser.add_argument("--profile", help="config profile, e.g. large")
     args = parser.parse_args()
-    cfg = load_config()
-    if cfg["benchmark"]["require_ac_power"] and not on_ac_power() and not args.allow_battery:
+    cfg = load_config(profile=args.profile)
+    if args.allow_battery:
+        cfg["benchmark"]["require_ac_power"] = False
+    if cfg["benchmark"]["require_ac_power"] and not on_ac_power():
         raise SystemExit("On battery power: plug in (or pass --allow-battery for a test run).")
     raw = PROJECT_ROOT / cfg["paths"]["raw_instances"]
     out = PROJECT_ROOT / cfg["features"]["probe"]["out"]

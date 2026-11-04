@@ -1,0 +1,127 @@
+{
+  "started": "2026-11-04 22:43:23",
+  "machine": "LAPTOP-7BGOJLM8",
+  "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+  "python": "3.14.4",
+  "cpus": [
+    10,
+    12,
+    14
+  ],
+  "ac_power": true,
+  "cpu_freq": {
+    "current": 1200.0,
+    "min": 0.0,
+    "max": 1200.0
+  },
+  "cpu_topology": [
+    {
+      "cpu": 0,
+      "physical_core": 0,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 1,
+      "physical_core": 0,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 2,
+      "physical_core": 2,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 3,
+      "physical_core": 3,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 4,
+      "physical_core": 4,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 5,
+      "physical_core": 5,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 6,
+      "physical_core": 6,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 7,
+      "physical_core": 7,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 8,
+      "physical_core": 8,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 9,
+      "physical_core": 9,
+      "llc": 0,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 10,
+      "physical_core": 10,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 11,
+      "physical_core": 10,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 12,
+      "physical_core": 12,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 13,
+      "physical_core": 12,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 14,
+      "physical_core": 14,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 15,
+      "physical_core": 14,
+      "llc": 0,
+      "efficiency_class": 1
+    },
+    {
+      "cpu": 16,
+      "physical_core": 16,
+      "llc": 16,
+      "efficiency_class": 0
+    },
+    {
+      "cpu": 17,
+      "physical_core": 17,
+      "llc": 16,
+      "efficiency_class": 0
+    }
+  ]
+}

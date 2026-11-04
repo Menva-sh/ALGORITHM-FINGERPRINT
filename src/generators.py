@@ -273,8 +273,9 @@ def summarize(index: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--summary", action="store_true", help="only summarise index.csv")
+    parser.add_argument("--profile", help="config profile, e.g. large")
     args = parser.parse_args()
-    cfg = load_config()
+    cfg = load_config(profile=args.profile)
     out_dir = PROJECT_ROOT / cfg["paths"]["raw_instances"]
     if args.summary:
         index = pd.read_csv(out_dir / "index.csv")

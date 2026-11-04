@@ -1,6 +1,6 @@
 best_time,astar,bfs,bidirectional_bfs,bidirectional_dijkstra,dijkstra
-astar,4355,0,0,42,0
-bfs,1431,491,942,552,0
-bidirectional_bfs,348,1,4936,908,0
-bidirectional_dijkstra,7,0,5,13345,0
-dijkstra,211,2,0,1121,103
+astar,4374,0,0,41,0
+bfs,1424,491,944,552,0
+bidirectional_bfs,341,1,4937,908,0
+bidirectional_dijkstra,5,0,2,13344,0
+dijkstra,208,2,0,1123,103
