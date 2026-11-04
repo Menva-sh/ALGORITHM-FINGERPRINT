@@ -14,3 +14,6 @@ data/raw_instances/*
 data/bench/*
 !data/bench/run_info_*.json
 *.tmp*
+
+# Probe run log (probes themselves are kept: data/probes.csv)
+data/probes_run.log

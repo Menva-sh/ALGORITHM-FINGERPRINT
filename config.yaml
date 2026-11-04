@@ -73,6 +73,11 @@ features:
   probe:
     k_values: [16, 64, 256]         # node-expansion budgets to try
     default_k: 64
+    repeats: 3                      # probe time = median of this many runs
+    out: data/probes.csv            # one row per (graph, query, k)
+    names: [probe_settled, probe_found_target, probe_queue_final, probe_queue_mean,
+            probe_queue_max, probe_growth, probe_branch_mean, probe_branch_var,
+            probe_radius]
 
 # ---------------------------------------------------------------- modelling
 model:
@@ -94,4 +99,7 @@ model:
 experiments:
   tiers:                            # Stage 6: cost-aware feature tiers
     tier_sets: [[0], [0, 1], [0, 1, 2], [0, 1, 2, 3]]
+    models: [plain_tree, random_forest]
+  probing:                          # Stage 7: static vs static + probe features
+    static_sets: [[0], [0, 1]]
     models: [plain_tree, random_forest]

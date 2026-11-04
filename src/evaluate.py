@@ -103,24 +103,32 @@ def add_savings(table: pd.DataFrame, run_all_s: float) -> pd.DataFrame:
 # ------------------------------------------------------------------ experiment
 
 def evaluate(df: pd.DataFrame, cfg: dict[str, Any], tiers: list[int] | None = None,
-             model_names: list[str] | None = None, cv: bool = True) -> dict[str, Any]:
+             model_names: list[str] | None = None, cv: bool = True,
+             extra_features: list[str] | None = None,
+             extra_cost_col: str | None = None) -> dict[str, Any]:
     """Train on train graphs, evaluate all methods on test graphs, CV on train graphs.
 
     tiers defaults to model.feature_tiers; model_names restricts the selectors trained
-    (default: all); cv=False skips cross-validation.
+    (default: all); cv=False skips cross-validation. extra_features / extra_cost_col add
+    PER-QUERY features (e.g. probes) and their cost column (ns); that cost is charged in
+    full to its query and never amortised over the graph.
     """
     m = cfg["model"]
     candidates = cfg["algorithms"]["candidates"]
     tiers = m["feature_tiers"] if tiers is None else tiers
     tie = cfg["benchmark"]["tie_threshold_rel"]
-    cols = feature_columns(df, cfg, tiers)
+    cols = feature_columns(df, cfg, tiers) + list(extra_features or [])
     X = df[cols].to_numpy(dtype=float)
     y = df[m["label"]].to_numpy()
     label_idx = np.array([candidates.index(a) for a in y])
     T = time_matrix(df, candidates)
     mask = applicability_mask(df, candidates)
-    feat = feature_cost_ns(df, tiers)
-    feat_amortised = feat / df.groupby("graph_id")["graph_id"].transform("size").to_numpy()
+    graph_feat = feature_cost_ns(df, tiers)
+    query_feat = (df[extra_cost_col].to_numpy(dtype=float) if extra_cost_col
+                  else np.zeros(len(df)))
+    feat = graph_feat + query_feat
+    feat_amortised = (graph_feat / df.groupby("graph_id")["graph_id"].transform("size")
+                      .to_numpy() + query_feat)
 
     train, test = split_by_graph(df, m["test_fraction"], cfg["seed"])
     Tt, mt = T[test], mask[test]
