@@ -38,22 +38,22 @@ with left.container(key="card_road"):
     _, path, _ = ALGORITHMS["astar"](g, s, t)
     xy = np.array(g.coords)
     fig, ax = plt.subplots(figsize=(7, 5.4))
-    fig.patch.set_facecolor("#f1ece2")
-    ax.set_facecolor("#f1ece2")
+    fig.patch.set_alpha(0)  # transparent: works in light and dark theme
+    ax.set_facecolor("none")
     for u, v, _ in g.edges():
-        ax.plot(*xy[[u, v]].T, color="#c9bfae", linewidth=1.1, zorder=1)
+        ax.plot(*xy[[u, v]].T, color="#8b919a", alpha=0.6, linewidth=1.0, zorder=1)
     if path:
-        ax.plot(*xy[path].T, color="#d9472b", linewidth=3.2, solid_capstyle="round", zorder=2)
-    ax.scatter(*xy[[s]].T, color="#2e8b57", s=110, edgecolor="white", linewidth=2, zorder=3)
-    ax.scatter(*xy[[t]].T, color="#2f6bb3", s=110, edgecolor="white", linewidth=2, zorder=3)
+        ax.plot(*xy[path].T, color="#e5484d", linewidth=3.2, solid_capstyle="round", zorder=2)
+    ax.scatter(*xy[[s]].T, color="#2e9a62", s=110, edgecolor="none", zorder=3)
+    ax.scatter(*xy[[t]].T, color="#3b74c4", s=110, edgecolor="none", zorder=3)
     ax.set_aspect("equal")
     ax.axis("off")
     fig.tight_layout(pad=0.4)
     st.pyplot(fig)
     plt.close(fig)
     st.markdown("<div class='legend muted'>"
-                "<span><span style='width:22px;height:3px;background:#c9bfae;display:inline-block'></span>Roads</span>"
-                "<span><span style='width:22px;height:4px;background:#d9472b;display:inline-block'></span>Shortest path</span>"
+                "<span><span style='width:22px;height:3px;background:#8b919a;display:inline-block'></span>Roads</span>"
+                "<span><span style='width:22px;height:4px;background:#e5484d;display:inline-block'></span>Shortest path</span>"
                 f"<span>{ui.dot('astar', 12)}Start</span><span>{ui.dot('dijkstra', 12)}End</span>"
                 "</div>", unsafe_allow_html=True)
 
@@ -62,18 +62,18 @@ with right:
         st.markdown(f"<div class='eyebrow'>RECOMMENDED ALGORITHM</div>"
                     f"<div class='big-algo'>{ui.dot(choice)}{ui.esc(NAMES[choice])}</div>"
                     f"<div style='display:flex;justify-content:space-between;align-items:end'>"
-                    f"<b>Confidence</b><span style='font-size:1.7rem;font-weight:700;color:#1f5e58'>"
-                    f"{rec['confidence']:.0%}</span></div>{ui.bar(rec['confidence'], ui.TEAL)}"
-                    f"<p style='margin-top:12px;color:#33403f'>{ui.esc(reason(choice, r['fp'].features))}</p>",
+                    f"<b>Confidence</b><span style='font-size:1.5rem;font-weight:700' class='accent'>"
+                    f"{rec['confidence']:.0%}</span></div>{ui.bar(rec['confidence'], ui.accent())}"
+                    f"<p style='margin-top:10px' class='lead'>{ui.esc(reason(choice, r['fp'].features))}</p>",
                     unsafe_allow_html=True)
     fastest = runs.iloc[0]["algorithm"]
     regret = r["chosen_us"] / runs.iloc[0]["median_us"] - 1
     verdict = ("Pick was right, no regret" if choice == fastest
                else f"{NAMES[fastest]} was faster ({regret:.0%} regret)")
     with st.container(key="card_verdict"):
-        st.markdown(f"<b class='{'good' if choice == fastest else ''}' style='font-size:1.15rem'>"
-                    f"{'✓ ' if choice == fastest else ''}{verdict}</b>"
-                    + ui.race_rows(runs, ui.SHORT, label_px=130), unsafe_allow_html=True)
+        st.markdown(f"<b style='font-size:1.05rem;color:var({'--good' if choice == fastest else '--bad'})'>"
+                    f"{verdict}</b>"
+                    + ui.race_rows(runs, ui.SHORT), unsafe_allow_html=True)
     net = r["chosen_us"] + r["overhead_us"]
     if net > r["fixed_us"]:
         st.markdown(f"<div class='callout warn'><b>Slower overall on this tiny query</b><br>"

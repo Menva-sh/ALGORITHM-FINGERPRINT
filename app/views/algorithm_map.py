@@ -44,10 +44,10 @@ with st.container(key="card_map"):
         names = [n for t in [0, 1] for n in ui.CFG["features"]["tiers"][t]]
         spot = df.iloc[[nearest_graph(yours, df, names)]].assign(label="Your graph")
         layers += [alt.Chart(spot).mark_point(size=500, shape="circle", filled=False,
-                                              strokeWidth=3, color="#1d2a2a").encode(x="x:Q", y="y:Q"),
+                                              strokeWidth=3, color="#888888").encode(x="x:Q", y="y:Q"),
                    alt.Chart(spot).mark_text(dy=-26, fontSize=14, fontWeight="bold",
-                                             color="#1d2a2a").encode(x="x:Q", y="y:Q", text="label:N")]
-    st.altair_chart(alt.layer(*layers).properties(height=560, background="#faf6ef")
+                                             color="#888888").encode(x="x:Q", y="y:Q", text="label:N")]
+    st.altair_chart(alt.layer(*layers).properties(height=480, background="transparent")
                     .configure_view(strokeWidth=0).interactive(), use_container_width=True)
     note = (" The ring marks the benchmark graph most similar to the one you tried on "
             "“Try a graph”." if yours is not None else "")

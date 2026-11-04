@@ -17,7 +17,7 @@ st.markdown("<p class='lead'>Pick a graph and a query. A small model predicts th
 
 # ------------------------------------------------------------------ controls
 with st.container(key="card_controls"):
-    c1, c2, c3 = st.columns([1, 1, 1.05], gap="large")
+    c1, c2, c3 = st.columns([1, 0.9, 1.3], gap="medium")
     family = c1.selectbox("Graph type", list(fams), format_func=ui.FAMILY_NAMES.get)
     n = c2.select_slider("Number of nodes", CFG["generation"]["sizes"], value=1000,
                          format_func=lambda v: f"{v:,}")
@@ -79,21 +79,21 @@ with st.container(key="rec_main"):
     left, right = st.columns([2.2, 1], gap="large", vertical_alignment="center")
     left.markdown(f"<div class='eyebrow'>RECOMMENDED ALGORITHM</div>"
                   f"<div class='big-algo'>{ui.dot(choice)}{ui.esc(NAMES[choice])}</div>"
-                  f"<div class='lead' style='color:#33403f'>{ui.esc(reason(choice, f))}</div>",
+                  f"<div class='lead'>{ui.esc(reason(choice, f))}</div>",
                   unsafe_allow_html=True)
     right.markdown(f"<div style='display:flex;justify-content:space-between;align-items:end'>"
-                   f"<b>Confidence</b><span style='font-size:1.9rem;font-weight:700;color:#1f5e58'>"
-                   f"{rec['confidence']:.0%}</span></div>{ui.bar(rec['confidence'], ui.TEAL)}"
-                   f"<div style='margin-top:12px'><span class='pill {kind}'>{label}</span></div>",
+                   f"<b>Confidence</b><span style='font-size:1.6rem;font-weight:700' class='accent'>"
+                   f"{rec['confidence']:.0%}</span></div>{ui.bar(rec['confidence'], ui.accent())}"
+                   f"<div style='margin-top:10px'><span class='tag {kind}'>{label}</span></div>",
                    unsafe_allow_html=True)
 
 st.write("")
 why, fin = st.columns(2, gap="medium")
 with why.container(key="card_why"):
-    st.markdown("<h3>Why this pick?</h3><div class='muted'>Longer bar means a bigger push "
+    st.markdown("<h3>Why this pick?</h3><div class='muted small'>Longer bar means a bigger push "
                 "toward this choice.</div>", unsafe_allow_html=True)
     items = why_items(rec["shap"], f)
-    rows = "".join(f"<div class='why-row'><div>{ui.esc(lbl)}</div>{ui.bar(w, ui.TEAL)}</div>"
+    rows = "".join(f"<div class='why-row'><div>{ui.esc(lbl)}</div>{ui.bar(w, ui.accent())}</div>"
                    for lbl, w in items) or "<p class='muted'>No single feature stood out.</p>"
     st.markdown(rows, unsafe_allow_html=True)
 with fin.container(key="card_fp"):
@@ -131,7 +131,7 @@ net = r["chosen_us"] + r["overhead_us"]
 saving = 1 - net / r["fixed_us"]
 k1, k2, k3 = st.columns(3)
 k1.markdown(ui.stat("Was the pick right?",
-                    "✓ Yes" if right_pick else f"No, {NAMES[fastest]}",
+                    "Yes" if right_pick else f"No, {NAMES[fastest]}",
                     f"Fastest of {len(runs)} algorithms" if right_pick
                     else f"Picked {NAMES[choice]}", "good" if right_pick else "bad"),
             unsafe_allow_html=True)

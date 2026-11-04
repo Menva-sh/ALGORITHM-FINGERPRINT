@@ -1,7 +1,8 @@
-"""Shared look and data for the demo pages: theme CSS, header, colours, cached resources."""
+"""Shared look and data for the demo pages: theme-aware CSS, colours, cached resources."""
 from __future__ import annotations
 
 import html
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -16,9 +17,12 @@ from src.real_graphs import parse_edge_list, read_edge_list
 
 CFG = load_config()
 C = CFG["algorithms"]["candidates"]
-TEAL = "#1f6f68"
-COLORS = {"dijkstra": "#2f6bb3", "bidirectional_dijkstra": "#dd7230", "astar": "#2e8b57",
-          "bfs": "#cf9a2e", "bidirectional_bfs": "#c4547a"}
+STATIC = Path(__file__).resolve().parent / "static"
+# Per-theme accents (custom HTML cannot read Streamlit's theme, so the CSS is chosen per run).
+PALETTE = {"light": {"accent": "#0f766e", "good": "#15803d", "bad": "#b42318", "warn": "#92400e"},
+           "dark": {"accent": "#2bb3a3", "good": "#4ade80", "bad": "#f87171", "warn": "#fbbf24"}}
+COLORS = {"dijkstra": "#3b74c4", "bidirectional_dijkstra": "#e07a3a", "astar": "#2e9a62",
+          "bfs": "#d4a12f", "bidirectional_bfs": "#c95f88"}
 SHORT = {**NAMES, "bidirectional_dijkstra": "Bi-Dijkstra", "bidirectional_bfs": "Bi-BFS"}
 FAMILY_NAMES = {"erdos_renyi": "Random (Erdős–Rényi)", "barabasi_albert": "Scale-free (Barabási–Albert)",
                 "watts_strogatz": "Small-world (Watts–Strogatz)", "grid_2d": "Grid",
@@ -28,94 +32,71 @@ FAMILY_SHORT = {"erdos_renyi": "Random", "barabasi_albert": "Scale-free",
 WEIGHT_NAMES = {"unit": "Unit", "uniform": "Uniform", "heavy_tailed": "Heavy-tailed",
                 "euclidean": "Distance"}
 
-LOGO = (f"<svg width='34' height='34' viewBox='0 0 34 34'><circle cx='17' cy='17' r='17' "
-        f"fill='{TEAL}'/><path d='M9 22a8 8 0 0 1 16 0' stroke='white' stroke-width='2.4' "
-        f"fill='none' stroke-linecap='round'/><path d='M13 22a4 4 0 0 1 8 0' stroke='white' "
-        f"stroke-width='2.4' fill='none' stroke-linecap='round'/></svg>")
-
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600&display=swap');
-html, body, .stApp, .stMarkdown, p, label, li, input, button { font-family: 'DM Sans', sans-serif; }
-h1, h2, h3, .serif { font-family: 'Fraunces', Georgia, serif !important; color: #1d2a2a;
-  font-weight: 600 !important; letter-spacing: -0.01em; }
-h1 { font-size: 2.7rem !important; line-height: 1.15 !important; padding-bottom: .3rem !important; }
-h2 { font-size: 1.9rem !important; } h3 { font-size: 1.45rem !important; }
-.stApp { background: #f8f4ee; }
-header[data-testid="stHeader"] { background: transparent; }
-.block-container { max-width: 1180px; padding-top: 1.4rem; }
-.accent { color: #1f6f68; }
-.lead { font-size: 1.12rem; color: #4b5557; max-width: 760px; line-height: 1.55; }
-.muted { color: #5d6466; } .small { font-size: .9rem; }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div) { border-radius: 16px; }
-.stVerticalBlock[class*="st-key-card"] { background: #fff; border: 1px solid #ece5da;
-  border-radius: 16px; padding: 22px 26px; }
-.stVerticalBlock[class*="st-key-rec"] { background: #e6f0ec; border: 1px solid #cfe1da;
-  border-radius: 16px; padding: 24px 30px; }
-.eyebrow { font-size: .78rem; letter-spacing: .12em; font-weight: 600; color: #1f6f68; }
-.big-algo { font-family: 'Fraunces', Georgia, serif; font-size: 2.5rem; font-weight: 600;
-  color: #1d2a2a; display: flex; align-items: center; gap: .7rem; margin: .2rem 0 .4rem; }
-.dot { width: 16px; height: 16px; border-radius: 50%; display: inline-block; flex: none; }
-.pill { display: inline-block; padding: .25rem .75rem; border-radius: 999px; font-weight: 600;
-  font-size: .85rem; background: #d8ecdf; color: #1d5e3c; }
-.pill.warn { background: #f8e9c8; color: #7a5410; }
-.pill.tiny { font-size: .72rem; padding: .1rem .5rem; }
-.bar { height: 12px; border-radius: 999px; background: #efe8dc; overflow: hidden; }
-.bar.thick { height: 22px; border-radius: 8px; }
+:root { --accent: ACCENT; --good: GOOD; --bad: BAD; --warn: WARN;
+  --line: rgba(128,128,128,.28); --soft: rgba(128,128,128,.09); --track: rgba(128,128,128,.18); }
+.block-container { max-width: 1200px; padding-top: 4.2rem; padding-bottom: 3rem; }
+h1 { letter-spacing: -0.02em; }
+.accent { color: var(--accent); }
+.lead { font-size: 1.02rem; opacity: .78; max-width: 780px; line-height: 1.55; margin-bottom: .4rem; }
+.muted { opacity: .7; } .small { font-size: .88rem; }
+.stVerticalBlock[class*="st-key-card"] { border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 20px; }
+.stVerticalBlock[class*="st-key-rec"] { border: 1px solid var(--line); border-left: 4px solid var(--accent);
+  border-radius: 10px; padding: 18px 22px; background: var(--soft); }
+.eyebrow { font-size: .74rem; letter-spacing: .08em; font-weight: 700; opacity: .65; text-transform: uppercase; }
+.big-algo { font-size: 1.9rem; font-weight: 700; display: flex; align-items: center; gap: .55rem;
+  margin: .15rem 0 .35rem; letter-spacing: -0.01em; }
+.dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+.tag { display: inline-block; padding: .12rem .5rem; border-radius: 4px; font-weight: 600;
+  font-size: .78rem; border: 1px solid var(--line); }
+.tag.good { color: var(--good); } .tag.warn { color: var(--warn); }
+.bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar.thick { height: 16px; }
 .bar > span { display: block; height: 100%; border-radius: inherit; }
-.why-row { margin: 10px 0 14px; } .why-row div:first-child { margin-bottom: 6px; color: #1d2a2a; }
-.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
-.tile { background: #f6f0e6; border-radius: 12px; padding: 12px 14px; }
-.tile .k { font-size: .82rem; color: #5d6466; } .tile .v { font-size: 1.55rem; font-weight: 600; color: #1d2a2a; }
-.stat { background: #fff; border: 1px solid #ece5da; border-radius: 16px; padding: 18px 22px; height: 100%; }
-.stat .k { font-weight: 600; color: #4b5557; font-size: .92rem; }
-.stat .v { font-size: 2rem; font-weight: 700; color: #1d2a2a; margin: .2rem 0; }
-.stat .v.good { color: #1d6b3d; } .stat .v.bad { color: #a33b2b; } .stat .v.teal { color: #1f5e58; }
-.race-row { display: grid; grid-template-columns: 190px 1fr 90px; gap: 14px; align-items: center;
-  margin: 10px 0; }
-.race-row .t { text-align: right; font-weight: 500; }
-.callout { border-radius: 16px; padding: 16px 20px; }
-.callout.warn { background: #fdf3dc; border: 1px solid #f0d9a4; }
-.callout.warn b { color: #6b4a0e; }
-.callout.good { background: #e8f3ec; border: 1px solid #c8e2d1; }
-.callout.good b { color: #1d5e3c; }
-.wins { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.wins .stat:nth-child(5) { grid-column: 1 / -1; }
-.legend { display: flex; flex-wrap: wrap; gap: 22px; margin-bottom: 6px; }
-.legend span { display: inline-flex; align-items: center; gap: 8px; }
-.brand { display: flex; align-items: center; gap: 12px; font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.45rem; font-weight: 600; color: #1d2a2a; }
-.nav-active { background: #e1efea; color: #1f6f68; padding: .5rem 1rem; border-radius: 999px;
-  font-weight: 600; text-align: center; }
-.stButton button[kind="primary"] { background: #1f6f68; border-color: #1f6f68; border-radius: 10px; }
-.stButton button[kind="secondary"] { border-radius: 10px; border-color: #1f6f68; color: #1f6f68; }
-.footer { border-top: 1px solid #e3dccf; margin-top: 28px; padding-top: 14px; color: #5d6466; font-size: .9rem; }
-@media (max-width: 760px) { .tiles { grid-template-columns: repeat(2, 1fr); }
-  .wins { grid-template-columns: repeat(2, 1fr); } .race-row { grid-template-columns: 110px 1fr 70px; } }
+.why-row { margin: 8px 0 12px; } .why-row div:first-child { margin-bottom: 5px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-top: 8px; }
+.tile { background: var(--soft); border-radius: 8px; padding: 10px 12px; }
+.tile .k { font-size: .8rem; opacity: .7; } .tile .v { font-size: 1.3rem; font-weight: 700; }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; height: 100%; }
+.stat .k { font-weight: 600; font-size: .86rem; opacity: .75; }
+.stat .v { font-size: 1.6rem; font-weight: 700; margin: .15rem 0; }
+.stat .v.good { color: var(--good); } .stat .v.bad { color: var(--bad); } .stat .v.teal { color: var(--accent); }
+.race-row { display: grid; grid-template-columns: minmax(70px, 170px) 1fr auto; gap: 12px;
+  align-items: center; margin: 8px 0; }
+.race-row .t { text-align: right; font-variant-numeric: tabular-nums; min-width: 64px; }
+.callout { border-radius: 10px; padding: 14px 18px; border: 1px solid var(--line); }
+.callout.warn { border-left: 4px solid var(--warn); } .callout.warn b { color: var(--warn); }
+.callout.good { border-left: 4px solid var(--good); } .callout.good b { color: var(--good); }
+.wins { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+button[data-variant="segmented_control"][aria-checked="true"] { background: var(--accent) !important;
+  color: #fff !important; border-color: var(--accent) !important; }
+.footer { border-top: 1px solid var(--line); margin-top: 26px; padding-top: 12px; opacity: .7; font-size: .86rem; }
+@media (max-width: 640px) { .block-container { padding-left: 1rem; padding-right: 1rem; }
+  .big-algo { font-size: 1.5rem; } .stat .v { font-size: 1.35rem; } }
 </style>
 """
-CSS = CSS.replace("</style>", """
-button[data-variant="segmented_control"][aria-checked="true"] { background: #1f6f68 !important;
-  color: #fff !important; border-color: #1f6f68 !important; }
-[data-baseweb="select"] > div { background: #fff !important; }
-</style>""")
+
+
+def theme() -> str:
+    """'light' or 'dark' (the viewer's current Streamlit theme)."""
+    t = getattr(getattr(st.context, "theme", None), "type", None)
+    return t if t in PALETTE else "light"
 
 
 def inject_css() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
+    p = PALETTE[theme()]
+    css = (CSS.replace("ACCENT", p["accent"]).replace("GOOD", p["good"])
+           .replace("BAD", p["bad"]).replace("WARN", p["warn"]))
+    st.markdown(css, unsafe_allow_html=True)
+    st.logo(str(STATIC / f"logo_{theme()}.svg"), size="large")
 
 
-def header(pages: list[Any], current: Any) -> None:
-    """Brand on the left, page links on the right (the current page as a highlighted pill)."""
-    cols = st.columns([4.2, 1.2, 1.3, 1.3], vertical_alignment="center")
-    cols[0].markdown(f"<div class='brand'>{LOGO}Algorithm Fingerprint</div>", unsafe_allow_html=True)
-    for col, page in zip(cols[1:], pages):
-        if page.url_path == current.url_path:
-            col.markdown(f"<div class='nav-active'>{page.title}</div>", unsafe_allow_html=True)
-        else:
-            col.page_link(page, label=page.title)
-    st.markdown("<div style='border-bottom:1px solid #e3dccf;margin:4px 0 18px'></div>",
-                unsafe_allow_html=True)
+def accent() -> str:
+    return PALETTE[theme()]["accent"]
 
 
 def esc(text: Any) -> str:
@@ -138,15 +119,14 @@ def stat(key: str, value: str, sub: str = "", cls: str = "") -> str:
             f"<div class='muted'>{esc(sub)}</div></div>")
 
 
-def race_rows(runs: pd.DataFrame, names: dict[str, str] = NAMES, label_px: int = 190) -> str:
+def race_rows(runs: pd.DataFrame, names: dict[str, str] = NAMES) -> str:
     """Bar rows: one per algorithm, fastest first, scaled to the slowest."""
     slowest = runs["median_us"].max()
-    grid = f"grid-template-columns:{label_px}px 1fr {80 if label_px < 150 else 90}px"
     rows = []
     for i, r in runs.iterrows():
-        tag = " <span class='pill tiny'>Fastest</span>" if i == 0 else ""
+        tag = " <span class='tag good'>Fastest</span>" if i == 0 else ""
         label = f"<b>{esc(names[r['algorithm']])}</b>{tag}" if i == 0 else esc(names[r["algorithm"]])
-        rows.append(f"<div class='race-row' style='{grid}'><div>{label}</div>"
+        rows.append(f"<div class='race-row'><div>{label}</div>"
                     f"{bar(r['median_us'] / slowest, COLORS[r['algorithm']], thick=True)}"
                     f"<div class='t'>{r['median_us']:,.1f} µs</div></div>")
     return "".join(rows)
