@@ -170,3 +170,90 @@ def inference_ns(model: ClassifierMixin, X: np.ndarray, mask: np.ndarray,
         call(r)
         times.append(time.perf_counter_ns() - start)
     return float(np.median(times))
+
+
+# ------------------------------------------------------------------ uncertainty
+
+def masked_probs(scores: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Scores -> probabilities over APPLICABLE candidates only (rows sum to 1).
+
+    Unseen classes (-inf) and inapplicable algorithms get 0; a row with no mass on any
+    applicable algorithm becomes uniform over the applicable ones.
+    """
+    p = np.where(mask & np.isfinite(scores), np.clip(scores, 0.0, None), 0.0)
+    total = p.sum(axis=1, keepdims=True)
+    uniform = mask / mask.sum(axis=1, keepdims=True)
+    return np.where(total > 0, p / np.where(total > 0, total, 1.0), uniform)
+
+
+def calibrated(model: ClassifierMixin, X: np.ndarray, y: np.ndarray, groups: np.ndarray,
+               cfg: dict[str, Any]) -> ClassifierMixin:
+    """Probability-calibrated copy of model (CalibratedClassifierCV with GROUP folds)."""
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.model_selection import GroupKFold
+
+    c = cfg["model"]["calibration"]
+    splits = list(GroupKFold(n_splits=c["folds"]).split(X, y, groups))
+    return CalibratedClassifierCV(model, method=c["method"], cv=splits).fit(X, y)
+
+
+def expected_calibration_error(confidence: np.ndarray, correct: np.ndarray,
+                               n_bins: int) -> float:
+    """ECE of top-choice confidence: bin-weighted |accuracy - mean confidence|."""
+    bins = np.minimum((confidence * n_bins).astype(int), n_bins - 1)
+    ece = 0.0
+    for b in range(n_bins):
+        in_bin = bins == b
+        if in_bin.any():
+            ece += in_bin.mean() * abs(correct[in_bin].mean() - confidence[in_bin].mean())
+    return float(ece)
+
+
+def conformal_threshold(probs: np.ndarray, label_idx: np.ndarray, coverage: float) -> float:
+    """Split-conformal threshold on the nonconformity score 1 - p(true algorithm).
+
+    Returns the k-th smallest calibration score with k = ceil((n + 1) * coverage) (the
+    finite-sample conformal quantile); if k > n every algorithm is included (threshold 1).
+    """
+    scores = np.sort(1.0 - probs[np.arange(len(label_idx)), label_idx])
+    k = int(np.ceil((len(scores) + 1) * coverage))
+    return 1.0 if k > len(scores) else float(scores[k - 1])
+
+
+def conformal_sets(probs: np.ndarray, mask: np.ndarray, threshold: float) -> np.ndarray:
+    """Boolean (rows x candidates): applicable algorithms with 1 - p <= threshold.
+
+    An empty set (nothing plausible enough) falls back to the top-probability algorithm.
+    """
+    sets = mask & (1.0 - probs <= threshold)
+    empty = ~sets.any(axis=1)
+    sets[empty, probs[empty].argmax(axis=1)] = True
+    return sets
+
+
+def abstaining_cost(sets: np.ndarray, probs: np.ndarray, T: np.ndarray, fallback: int,
+                    policy: str) -> np.ndarray:
+    """Search cost (ns) per row of the selector with abstention.
+
+    Set of one algorithm -> run it. Larger set ("not sure"):
+      'fallback'  run the safe default algorithm (index `fallback`)
+      'top2'      run the two most probable algorithms interleaved on one core: both
+                  advance at half speed until the first finishes -> 2 * min(t1, t2)
+      'none'      ignore the set, run the top-probability algorithm (no abstention)
+    """
+    rows = np.arange(len(T))
+    top = probs.argmax(axis=1)
+    cost = T[rows, top].copy()
+    if policy == "none":
+        return cost
+    unsure = sets.sum(axis=1) > 1
+    if policy == "fallback":
+        cost[unsure] = T[unsure, fallback]
+    elif policy == "top2":
+        second = np.argsort(-probs, axis=1)[:, 1]
+        pair = np.minimum(T[rows, top], np.where(np.isnan(T[rows, second]), np.inf,
+                                                 T[rows, second]))
+        cost[unsure] = 2 * pair[unsure]
+    else:
+        raise ValueError(f"unknown policy {policy!r}")
+    return cost

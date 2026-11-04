@@ -1,0 +1,11 @@
+Rules distilled from the random forest (T0 features)
+fidelity to the forest on test queries: 0.964
+
+IF is_weighted = 0 AND has_coordinates = 0 AND n_nodes <= 175 THEN bfs   [970 training queries, 72% of them labelled bfs by the forest]
+IF is_weighted = 0 AND has_coordinates = 0 AND n_nodes > 175 THEN bidirectional_bfs   [4800 training queries, 100% of them labelled bidirectional_bfs by the forest]
+IF is_weighted = 0 AND has_coordinates = 1 AND density <= 0.007925 THEN astar   [1480 training queries, 64% of them labelled astar by the forest]
+IF is_weighted = 0 AND has_coordinates = 1 AND density > 0.007925 THEN bfs   [1400 training queries, 89% of them labelled bfs by the forest]
+IF is_weighted = 1 AND has_coordinates = 0 AND density <= 0.1253 THEN bidirectional_dijkstra   [11440 training queries, 100% of them labelled bidirectional_dijkstra by the forest]
+IF is_weighted = 1 AND has_coordinates = 0 AND density > 0.1253 THEN bidirectional_dijkstra   [40 training queries, 75% of them labelled bidirectional_dijkstra by the forest]
+IF is_weighted = 1 AND has_coordinates = 1 AND n_edges <= 172.5 THEN astar   [240 training queries, 83% of them labelled astar by the forest]
+IF is_weighted = 1 AND has_coordinates = 1 AND n_edges > 172.5 THEN astar   [2670 training queries, 98% of them labelled astar by the forest]

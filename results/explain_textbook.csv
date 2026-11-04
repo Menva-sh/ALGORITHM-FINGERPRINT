@@ -1,0 +1,11 @@
+advice,queries,holds_in_labels,rules_follow,tier_set
+Unweighted graphs: a BFS variant is fastest,2150,0.8860465116279069,0.7813953488372093,T0
+Coordinates + distance weights: A* is fastest,690,0.9,1.0,T0
+"Weighted, no coordinates: bidirectional Dijkstra is fastest",2920,0.9253424657534246,1.0,T0
+Large graphs (>= 2500 nodes): a bidirectional search is fastest,2040,0.7294117647058823,0.7107843137254902,T0
+Small graphs (100 nodes): a bidirectional search is fastest,790,0.5784810126582278,0.5949367088607594,T0
+Unweighted graphs: a BFS variant is fastest,2150,0.8860465116279069,1.0,T0+1+2+3
+Coordinates + distance weights: A* is fastest,690,0.9,1.0,T0+1+2+3
+"Weighted, no coordinates: bidirectional Dijkstra is fastest",2920,0.9253424657534246,0.9794520547945206,T0+1+2+3
+Large graphs (>= 2500 nodes): a bidirectional search is fastest,2040,0.7294117647058823,0.7107843137254902,T0+1+2+3
+Small graphs (100 nodes): a bidirectional search is fastest,790,0.5784810126582278,0.569620253164557,T0+1+2+3

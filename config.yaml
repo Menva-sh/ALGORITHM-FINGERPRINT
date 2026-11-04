@@ -93,6 +93,9 @@ model:
   svm: {C: 10.0, gamma: scale}
   mlp: {hidden_layer_sizes: [64, 32], max_iter: 500}
   conformal_coverage: [0.8, 0.9, 0.95]
+  calibration: {method: isotonic, folds: 3}   # CalibratedClassifierCV, group folds
+  calibration_fraction: 0.25        # share of TRAIN graphs held out for conformal calibration
+  ece_bins: 10
   label_balance_max: 0.80           # warn if one algorithm wins more than this
 
 # ---------------------------------------------------------------- experiments
@@ -103,3 +106,12 @@ experiments:
   probing:                          # Stage 7: static vs static + probe features
     static_sets: [[0], [0, 1]]
     models: [plain_tree, random_forest]
+  uncertainty:                      # Stage 8: calibration, conformal sets, abstention
+    tiers: [0]
+    models: [plain_tree, random_forest]
+  explain:                          # Stage 8: SHAP, grouped permutation, distilled rules
+    tier_sets: [[0], [0, 1, 2, 3]]
+    shap_samples: 1000              # test rows explained with SHAP
+    perm_repeats: 5
+    corr_threshold: 0.8             # |Spearman| >= this puts features in one group
+    distill_depth: 3                # depth of the rule tree distilled from the forest
