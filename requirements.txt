@@ -1,13 +1,15 @@
-numpy
-pandas
-scipy
-scikit-learn
-networkx
-shap
-umap-learn
-matplotlib
-pytest
-pyyaml
-psutil
-streamlit
-# optional: osmnx (real road networks), mapie (conformal; we may hand-write it instead)
+# Versions the project was tested with (Python 3.14, Windows).
+numpy==2.5.4
+pandas==3.1.0
+scipy==1.18.1
+scikit-learn==1.9.1
+networkx==3.7
+shap==0.54.1
+umap-learn==0.5.12
+matplotlib==3.11.2
+altair==6.3.0
+pytest==9.2.0
+PyYAML==6.0.3
+psutil==7.2.2
+streamlit==1.66.1
+# optional: osmnx (fetching road networks; used once for data/real_graphs/road_piedmont.*)

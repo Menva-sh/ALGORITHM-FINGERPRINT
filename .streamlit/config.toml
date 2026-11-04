@@ -1,6 +1,2 @@
 [browser]
 gatherUsageStats = false
-
-[server]
-address = "localhost"
-headless = true

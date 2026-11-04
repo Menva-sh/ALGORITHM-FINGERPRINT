@@ -23,10 +23,9 @@ from src.config import PROJECT_ROOT, load_config  # noqa: E402
 from src.demo_logic import recommend, run_all, train_selector  # noqa: E402
 from src.evaluate import ALGO_COLORS  # noqa: E402
 from src.fingerprint import extract  # noqa: E402
-from src.generators import (InstanceSpec, build_instance, load_instance,  # noqa: E402
-                            sample_queries)
+from src.generators import InstanceSpec, build_instance, sample_queries  # noqa: E402
 from src.graph import Graph  # noqa: E402
-from src.real_graphs import parse_edge_list  # noqa: E402
+from src.real_graphs import parse_edge_list, read_edge_list  # noqa: E402
 
 st.set_page_config(page_title="Algorithm selector", layout="wide")
 CFG = load_config()
@@ -54,17 +53,12 @@ def uploaded_graph(edges_text: str, coords_text: str | None) -> Graph:
 
 
 @st.cache_resource(show_spinner="Loading road network...")
-def road_graph():
-    real = load_config(profile="real")
-    raw = PROJECT_ROOT / real["paths"]["raw_instances"]
-    if not (raw / "index.csv").exists():
+def road_graph() -> Graph | None:
+    """Road network from the committed edge/coordinate files (no local build needed)."""
+    edges = PROJECT_ROOT / CFG["paths"]["real_graphs"] / "road_piedmont.edges"
+    if not edges.exists():
         return None
-    index = pd.read_csv(raw / "index.csv")
-    road = index[index["graph_id"].str.contains("road")]
-    if road.empty:
-        return None
-    g, queries, meta = load_instance(raw / f"{road['graph_id'].iloc[0]}.npz")
-    return g, meta
+    return read_edge_list(edges, edges.with_suffix(".coords"))[0]
 
 
 # ------------------------------------------------------------------ shared widgets
@@ -199,11 +193,10 @@ def page_map() -> None:
 
 def page_road() -> None:
     st.title("Case study: a real road network")
-    loaded = road_graph()
-    if loaded is None:
-        st.warning("Road network not built: run `python -m src.real_graphs`.")
+    g = road_graph()
+    if g is None:
+        st.warning("Road network files missing in data/real_graphs.")
         return
-    g, meta = loaded
     st.write(f"OpenStreetMap drive network of Piedmont, California: {g.n} intersections, "
              f"{g.m} road segments, weights = length in metres. Never used for training.")
     s, t = query_picker(g, "road")
