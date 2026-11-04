@@ -175,6 +175,8 @@ def test_tier2_deterministic_for_seed() -> None:
 def test_tier3_cost_grows_faster_than_tier1() -> None:
     """Sanity check on the cost tiers on a 2500-node graph."""
     spec = InstanceSpec("random_geometric", 2500, (("avg_degree", 8),), "unit", 0)
-    fp = extract(build_instance(spec, CFG).graph, cfg=CFG)
-    assert fp.tier_cost_ns[0] < fp.tier_cost_ns[1] < fp.tier_cost_ns[3]
-    assert math.isfinite(fp.features["spectral_radius"])
+    g = build_instance(spec, CFG).graph
+    runs = [extract(g, cfg=CFG) for _ in range(3)]  # medians: one OS hiccup can't flip it
+    cost = {t: np.median([fp.tier_cost_ns[t] for fp in runs]) for t in [0, 1, 3]}
+    assert cost[0] < cost[1] < cost[3]
+    assert math.isfinite(runs[0].features["spectral_radius"])
