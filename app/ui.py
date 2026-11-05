@@ -74,6 +74,12 @@ h1 { letter-spacing: -0.02em; }
 .legend span { display: inline-flex; align-items: center; gap: 7px; }
 button[data-variant="segmented_control"][aria-checked="true"] { background: var(--accent) !important;
   color: #fff !important; border-color: var(--accent) !important; }
+.step { display: flex; align-items: center; gap: 12px; font-size: 1.25rem; font-weight: 700;
+  margin: 26px 0 8px; }
+.step .num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff;
+  font-size: .9rem; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.fit { font-size: .92rem; line-height: 1.6; } .fit b { font-weight: 600; }
+.stTextArea textarea { font-family: ui-monospace, Consolas, "Courier New", monospace; line-height: 1.25; }
 .footer { border-top: 1px solid var(--line); margin-top: 26px; padding-top: 12px; opacity: .7; font-size: .86rem; }
 @media (max-width: 640px) { .block-container { padding-left: 1rem; padding-right: 1rem; }
   .big-algo { font-size: 1.5rem; } .stat .v { font-size: 1.35rem; } }
@@ -203,3 +209,24 @@ def analyse(graph_key: Any, g: Graph, s: int, t: int, race: int = 0) -> dict[str
                       "chosen_us": float(t_of[rec["choice"]]), "fixed_us": float(t_of[best_fixed]),
                       "overhead_us": overhead_us}
     return cache[key]
+
+
+# ------------------------------------------------------------------ user inputs
+
+@st.cache_resource(show_spinner="Reading the file...")
+def parsed_upload(name: str, data: bytes, coords_text: str | None):
+    from src.inputs import parse_file
+    return parse_file(name, data, coords_text)
+
+
+@st.cache_resource(show_spinner="Reading the maze...")
+def parsed_maze(text: str):
+    from src.inputs import parse_maze
+    return parse_maze(text)
+
+
+def step(number: int, title: str, sub: str = "") -> None:
+    """Numbered section heading."""
+    st.markdown(f"<div class='step'><span class='num'>{number}</span><span>{esc(title)}</span></div>"
+                + (f"<div class='muted small' style='margin:-4px 0 10px 38px'>{esc(sub)}</div>"
+                   if sub else ""), unsafe_allow_html=True)

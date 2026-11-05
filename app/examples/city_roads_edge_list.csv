@@ -1,0 +1,9 @@
+# from,to,distance_km
+Home,Market,2.5
+Home,School,1.2
+School,Library,0.8
+Market,Library,1.9
+Library,Station,2.2
+Market,Station,3.6
+School,Park,1.5
+Park,Station,1.1

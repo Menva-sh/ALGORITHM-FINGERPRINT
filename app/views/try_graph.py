@@ -1,68 +1,133 @@
-"""Page 1: pick a graph and a query, see the pick, the reasons and the real race."""
+"""Page 1: choose a graph (generate, upload or draw), see the prediction, verify it."""
 from __future__ import annotations
 
 import streamlit as st
 
 from app import ui
 from src.demo_logic import NAMES, confidence_label, reason, why_items
+from src.inputs import FILE_TYPES, SAMPLE_MAZE, UnsupportedInput
 
 CFG = ui.CFG
 fams = CFG["generation"]["families"]
 
 st.markdown("<h1>Which shortest-path algorithm is <span class='accent'>fastest?</span></h1>",
             unsafe_allow_html=True)
-st.markdown("<p class='lead'>Pick a graph and a query. A small model predicts the fastest "
-            "algorithm from a quick fingerprint of the graph. Then we run every algorithm so "
-            "you can check it.</p>", unsafe_allow_html=True)
+st.markdown("<p class='lead'>Give it a graph and two points. A small model predicts the "
+            "fastest shortest-path algorithm from a quick fingerprint of the graph, then every "
+            "algorithm is run so you can check the prediction.</p>", unsafe_allow_html=True)
 
-# ------------------------------------------------------------------ controls
-with st.container(key="card_controls"):
-    c1, c2, c3 = st.columns([1, 0.9, 1.3], gap="medium")
-    family = c1.selectbox("Graph type", list(fams), format_func=ui.FAMILY_NAMES.get)
-    n = c2.select_slider("Number of nodes", CFG["generation"]["sizes"], value=1000,
-                         format_func=lambda v: f"{v:,}")
-    w_opts = fams[family]["weights"]
-    weights = c3.segmented_control("Edge weights", w_opts, default=w_opts[0],
-                                   format_func=ui.WEIGHT_NAMES.get, key=f"weights_{family}")
-    weights = weights or w_opts[0]
-    with st.expander("Advanced"):
-        a = st.columns(len(fams[family]["params"]) + 1)
-        params = tuple(sorted((k, a[i].selectbox(k.replace("_", " "), v, key=f"{family}_{k}"))
-                              for i, (k, v) in enumerate(fams[family]["params"].items())))
-        rep = a[-1].number_input("Random seed", 0, 99, 0)
-        own = st.toggle("Use my own edge list instead")
-        if own:
-            edges = st.file_uploader("Edge list: one 'u v' or 'u v w' per line",
-                                     type=["txt", "edges", "csv"])
-            coords = st.file_uploader("Optional coordinates: 'id x y' per line",
-                                      type=["txt", "coords"])
+FITS = ("<div class='fit'><b>Fits:</b> the shortest route between two points in a network "
+        "whose distances are 0 or more: road and transport maps, mazes and grids, social or "
+        "communication networks, game maps.<br><b>Does not fit:</b> visiting every stop "
+        "(travelling salesman), negative distances, shortest paths between all pairs at once, "
+        "flow or capacity problems.</div>")
 
-    if own and edges is not None:
-        text = edges.getvalue().decode("utf-8")
-        ctext = coords.getvalue().decode("utf-8") if coords else None
-        try:
-            g = ui.uploaded_graph(text, ctext)
-        except ValueError as e:
-            st.error(f"Could not read the edge list: {e}")
-            st.stop()
-        graph_key = ("upload", hash(text), hash(ctext))
-    else:
-        if own:
-            st.info("Upload an edge list under Advanced, or switch the toggle off.")
-            st.stop()
+# ------------------------------------------------------------------ 1. input
+ui.step(1, "Choose a graph")
+with st.container(key="card_input"):
+    mode = st.segmented_control("Input", ["Generate", "Upload a file", "Draw a maze"],
+                                default="Generate", label_visibility="collapsed",
+                                key="input_mode") or "Generate"
+    fixed_query = None
+    labels = None
+
+    if mode == "Generate":
+        c1, c2, c3 = st.columns([1, 0.9, 1.3], gap="medium")
+        family = c1.selectbox("Graph type", list(fams), format_func=ui.FAMILY_NAMES.get)
+        n = c2.select_slider("Number of nodes", CFG["generation"]["sizes"], value=1000,
+                             format_func=lambda v: f"{v:,}")
+        w_opts = fams[family]["weights"]
+        weights = c3.segmented_control("Edge weights", w_opts, default=w_opts[0],
+                                       format_func=ui.WEIGHT_NAMES.get,
+                                       key=f"weights_{family}") or w_opts[0]
+        with st.expander("More settings"):
+            a = st.columns(len(fams[family]["params"]) + 1)
+            params = tuple(sorted((k, a[i].selectbox(k.replace("_", " "), v, key=f"{family}_{k}"))
+                                  for i, (k, v) in enumerate(fams[family]["params"].items())))
+            rep = a[-1].number_input("Random seed", 0, 99, 0)
         g = ui.generated_graph(family, n, params, weights, int(rep))
         graph_key = (family, n, params, weights, int(rep))
+        source_note = ui.FAMILY_NAMES[family]
 
-    q1, q2 = st.columns([1, 4], vertical_alignment="center")
-    if q1.button("New random query", type="primary"):
-        ui.new_query("try")
-    query = ui.random_query(g, "try")
-    if query is None:
-        st.error("This graph has no two connected nodes.")
-        st.stop()
-    s, t = query
-    q2.markdown(f"<span class='muted'>Query: node {s} → node {t} · {g.n:,} nodes · {g.m:,} edges"
-                f" · {'weighted' if g.weighted else 'unweighted'}"
+    elif mode == "Upload a file":
+        u1, u2 = st.columns([1.4, 1], gap="large")
+        with u1:
+            up = st.file_uploader("Graph file", type=FILE_TYPES,
+                                  help="Edge list (u v [distance]), distance matrix (CSV), "
+                                       "GraphML, GML or node-link JSON.")
+            cup = st.file_uploader("Coordinates (optional): one 'node x y' per line",
+                                   type=["txt", "csv", "coords"])
+        with u2:
+            st.markdown("**Accepted formats**")
+            st.markdown("- **Edge list**: `A B 4` per line (distance optional)\n"
+                        "- **Distance matrix**: square CSV table, 0 = no road\n"
+                        "- **GraphML / GML / JSON**: from Gephi, networkx, yEd...")
+            st.markdown(FITS, unsafe_allow_html=True)
+            st.markdown("**Example files**")
+            for ex in sorted((ui.STATIC.parent / "examples").glob("*.*")):
+                st.download_button(ex.name, ex.read_bytes(), file_name=ex.name,
+                                   key=f"dl_{ex.name}", type="tertiary", icon=":material/download:")
+        if up is None:
+            st.info("Upload a file to continue, or download an example file first.")
+            st.stop()
+        coords_text = cup.getvalue().decode("utf-8-sig") if cup else None
+        try:
+            parsed = ui.parsed_upload(up.name, up.getvalue(), coords_text)
+        except UnsupportedInput as e:
+            st.error(f"**This input can't be used.** {e}")
+            st.stop()
+        g, labels = parsed.graph, parsed.labels
+        graph_key = ("upload", up.name, hash(up.getvalue()), hash(coords_text))
+        source_note = f"{up.name} ({parsed.fmt})"
+        for note in parsed.notes:
+            st.warning(note)
+
+    else:
+        m1, m2 = st.columns([1.4, 1], gap="large")
+        text = m1.text_area("Maze", SAMPLE_MAZE, height=230, label_visibility="collapsed",
+                            help="'#' = wall, any other character = open, S = start, T = target")
+        m2.markdown("**How to draw**\n\n`#` wall, space or `.` open, `S` start, `T` target. "
+                    "Moves go up, down, left and right.")
+        m2.markdown(FITS, unsafe_allow_html=True)
+        try:
+            parsed = ui.parsed_maze(text)
+        except UnsupportedInput as e:
+            st.error(f"**This maze can't be used.** {e}")
+            st.stop()
+        g, labels = parsed.graph, parsed.labels
+        fixed_query = (parsed.source, parsed.target)
+        graph_key = ("maze", hash(text))
+        source_note = "your maze"
+
+    # ---- query
+    st.divider()
+    if fixed_query:
+        s, t = fixed_query
+    else:
+        q1, q2 = st.columns([1, 3.2], vertical_alignment="center")
+        if q1.button("New random query", type="primary", use_container_width=True):
+            ui.new_query("try")
+        query = ui.random_query(g, "try")
+        if query is None:
+            st.error("No two nodes of this graph are connected, so there is no path to find.")
+            st.stop()
+        s, t = query
+        if labels is not None:
+            with q2.popover("Choose start and end"):
+                index = {name: i for i, name in enumerate(labels)}
+                a_ = st.text_input("Start node", labels[s])
+                b_ = st.text_input("End node", labels[t])
+                if a_ in index and b_ in index and a_ != b_:
+                    s, t = index[a_], index[b_]
+                else:
+                    st.caption("Type two different node names from the file.")
+        if g.component_labels()[s] != g.component_labels()[t]:
+            st.error("These two nodes are not connected: there is no path between them.")
+            st.stop()
+    name = (lambda i: labels[i]) if labels is not None else (lambda i: f"node {i}")
+    st.markdown(f"<span class='muted'>From <b>{ui.esc(name(s))}</b> to <b>{ui.esc(name(t))}</b>"
+                f" · {ui.esc(source_note)} · {g.n:,} nodes · {g.m:,} edges · "
+                f"{'weighted' if g.weighted else 'unweighted'}"
                 f"{' · map coordinates' if g.has_coordinates else ''}</span>",
                 unsafe_allow_html=True)
 
@@ -72,7 +137,8 @@ fp, rec, runs = r["fp"], r["rec"], r["runs"]
 f = fp.features
 st.session_state["your_graph"] = f  # shown on the algorithm map
 
-# ------------------------------------------------------------------ recommendation
+# ------------------------------------------------------------------ 2. prediction
+ui.step(2, "Prediction", "From the graph's fingerprint only, before any search is run.")
 choice = rec["choice"]
 label, kind = confidence_label(rec["confidence"])
 with st.container(key="rec_main"):
@@ -97,8 +163,8 @@ with why.container(key="card_why"):
                    for lbl, w in items) or "<p class='muted'>No single feature stood out.</p>"
     st.markdown(rows, unsafe_allow_html=True)
 with fin.container(key="card_fp"):
-    st.markdown(f"<h3>Graph fingerprint</h3><div class='muted'>Quick features, computed in about "
-                f"{fp.tier_cost_ns[0] / 1e3:.1f} microseconds.</div>", unsafe_allow_html=True)
+    st.markdown(f"<h3>Graph fingerprint</h3><div class='muted small'>Quick features, computed in "
+                f"about {fp.tier_cost_ns[0] / 1e3:.1f} microseconds.</div>", unsafe_allow_html=True)
     tiles = [("Nodes", f"{int(f['n_nodes']):,}"), ("Edges", f"{int(f['n_edges']):,}"),
              ("Density", f"{f['density']:.3g}"),
              ("Average degree", f"{2 * f['n_edges'] / f['n_nodes']:.2f}"),
@@ -108,18 +174,17 @@ with fin.container(key="card_fp"):
         f"<div class='tile'><div class='k'>{k}</div><div class='v'>{v}</div></div>"
         for k, v in tiles) + "</div>", unsafe_allow_html=True)
     with st.expander("See all features"):
-        st.dataframe([{"tier": f"Tier-{tier}", "feature": name, "value": f[name]}
-                      for tier in [0, 1, 2] for name in CFG["features"]["tiers"][tier]],
+        st.dataframe([{"tier": f"Tier-{tier}", "feature": nm, "value": f[nm]}
+                      for tier in [0, 1, 2] for nm in CFG["features"]["tiers"][tier]],
                      hide_index=True)
         st.caption("Cost per tier: " + ", ".join(f"Tier-{k} {v / 1e3:,.1f} µs"
                                                  for k, v in fp.tier_cost_ns.items())
                    + ". Only Tier-0 is used: the richer tiers cost more than they save.")
 
-# ------------------------------------------------------------------ the race
-st.write("")
+# ------------------------------------------------------------------ 3. verification
 h1, h2 = st.columns([4, 1], vertical_alignment="bottom")
-h1.markdown("<h2>The real race</h2><div class='muted'>We ran every algorithm that applies, so "
-            "you can check the pick.</div>", unsafe_allow_html=True)
+with h1:
+    ui.step(3, "Verification", "Every algorithm that applies was actually run on this query.")
 if h2.button("Run the race again", use_container_width=True):
     st.session_state["race"] = race + 1
     st.rerun()
