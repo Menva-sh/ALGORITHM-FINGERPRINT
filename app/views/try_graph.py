@@ -184,7 +184,8 @@ with fin.container(key="card_fp"):
 # ------------------------------------------------------------------ 3. verification
 h1, h2 = st.columns([4, 1], vertical_alignment="bottom")
 with h1:
-    ui.step(3, "Verification", "Every algorithm that applies was actually run on this query.")
+    ui.step(3, "Check the prediction", "Only for this demo: every algorithm is run so you can "
+            "see whether the pick was right. In real use only the chosen one runs.")
 if h2.button("Run the race again", use_container_width=True):
     st.session_state["race"] = race + 1
     st.rerun()
@@ -213,6 +214,12 @@ st.write("")
 with st.container(key="card_race"):
     st.markdown("<b>Search time per algorithm (shorter is better)</b>" + ui.race_rows(runs),
                 unsafe_allow_html=True)
+    h = ui.headline()
+    if h:
+        st.caption(f"On unseen benchmark graphs the model picks the fastest algorithm "
+                   f"{h['accuracy']:.0%} of the time. When it is wrong the pick is usually close, "
+                   f"so overall it is {h['saved']:.0%} faster than always using the best single "
+                   f"algorithm, prediction time included.")
     with st.expander("Show the raw numbers"):
         st.dataframe(runs.assign(algorithm=runs["algorithm"].map(NAMES)).round(2),
                      hide_index=True)

@@ -88,21 +88,30 @@ button[data-variant="segmented_control"][aria-checked="true"] { background: var(
 
 
 def theme() -> str:
-    """'light' or 'dark' (the viewer's current Streamlit theme)."""
+    """'light' or 'dark' (the viewer's current Streamlit theme).
+
+    On a session's first run Streamlit reports the system preference rather than the
+    theme actually shown; the app opens in light, so light is assumed until a rerun.
+    """
+    if not st.session_state.get("_theme_known"):
+        st.session_state["_theme_known"] = True
+        return "light"
     t = getattr(getattr(st.context, "theme", None), "type", None)
     return t if t in PALETTE else "light"
 
 
 def inject_css() -> None:
-    p = PALETTE[theme()]
+    """Theme CSS and logo; decides the theme once per run (see `theme`)."""
+    mode = st.session_state["_theme_now"] = theme()
+    p = PALETTE[mode]
     css = (CSS.replace("ACCENT", p["accent"]).replace("GOOD", p["good"])
            .replace("BAD", p["bad"]).replace("WARN", p["warn"]))
     st.markdown(css, unsafe_allow_html=True)
-    st.logo(str(STATIC / f"logo_{theme()}.svg"), size="large")
+    st.logo(str(STATIC / f"logo_{mode}.svg"), size="large")
 
 
 def accent() -> str:
-    return PALETTE[theme()]["accent"]
+    return PALETTE[st.session_state.get("_theme_now", "light")]["accent"]
 
 
 def esc(text: Any) -> str:
@@ -230,3 +239,13 @@ def step(number: int, title: str, sub: str = "") -> None:
     st.markdown(f"<div class='step'><span class='num'>{number}</span><span>{esc(title)}</span></div>"
                 + (f"<div class='muted small' style='margin:-4px 0 10px 38px'>{esc(sub)}</div>"
                    if sub else ""), unsafe_allow_html=True)
+
+
+@st.cache_data(show_spinner=False)
+def headline() -> dict[str, float] | None:
+    """Held-out accuracy and net saving of the deployed selector, from results/."""
+    path = PROJECT_ROOT / CFG["paths"]["results"] / "model_results.csv"
+    if not path.exists():
+        return None
+    row = pd.read_csv(path, index_col=0).loc["plain_tree"]
+    return {"accuracy": float(row["accuracy"]), "saved": float(row["saved_vs_best_fixed"])}

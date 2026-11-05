@@ -1,26 +1,18 @@
 [browser]
 gatherUsageStats = false
 
-# Light and dark themes: the app follows the viewer's system setting; the viewer can
-# switch in the app menu (top right) under Settings.
+# The app opens in this light theme. Viewers can still switch to dark in the app menu
+# (top right -> Settings); the custom page elements adapt to either.
 [theme]
+base = "light"
+primaryColor = "#0f766e"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f3f4f6"
+textColor = "#111827"
+borderColor = "#e5e7eb"
 font = "sans-serif"
 headingFont = "sans-serif"
 headingFontWeights = [700, 650, 600]
 headingFontSizes = ["2.1rem", "1.5rem", "1.15rem"]
 baseRadius = "0.5rem"
 showWidgetBorder = true
-
-[theme.light]
-primaryColor = "#0f766e"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f3f4f6"
-textColor = "#111827"
-borderColor = "#e5e7eb"
-
-[theme.dark]
-primaryColor = "#2bb3a3"
-backgroundColor = "#0e1117"
-secondaryBackgroundColor = "#1b1f27"
-textColor = "#e6e8eb"
-borderColor = "#2a2f38"
