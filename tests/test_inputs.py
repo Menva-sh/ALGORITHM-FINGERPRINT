@@ -91,4 +91,4 @@ def test_app_runs_in_maze_mode() -> None:
     at.session_state["input_mode"] = "Draw a maze"
     at.run()
     assert not at.exception, [e.value for e in at.exception]
-    assert any("your maze" in m.value for m in at.markdown)
+    assert any("your maze" in m.value.lower() for m in at.markdown)

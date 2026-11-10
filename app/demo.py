@@ -13,13 +13,22 @@ if str(ROOT) not in sys.path:
 
 import streamlit as st  # noqa: E402
 
-from app.ui import inject_css  # noqa: E402
+from app.ui import inject_css, sidebar_footer  # noqa: E402
 
 st.set_page_config(page_title="Algorithm Fingerprint", page_icon="🧭", layout="wide",
-                   initial_sidebar_state="collapsed")
+                   initial_sidebar_state="auto")  # open on desktop, collapsed on phones
 inject_css()
 
-PAGES = [st.Page("views/try_graph.py", title="Try a graph", default=True),
-         st.Page("views/algorithm_map.py", title="Algorithm map", url_path="map"),
-         st.Page("views/road_network.py", title="Road network", url_path="road")]
-st.navigation(PAGES, position="top").run()
+PAGES = {
+    "Explore": [st.Page("views/try_graph.py", title="Try a graph", icon=":material/hub:",
+                        default=True),
+                st.Page("views/algorithm_map.py", title="Algorithm map", url_path="map",
+                        icon=":material/scatter_plot:"),
+                st.Page("views/road_network.py", title="Road network", url_path="road",
+                        icon=":material/route:")],
+    "Evidence": [st.Page("views/results.py", title="Results", url_path="results",
+                         icon=":material/table_chart:")],
+}
+page = st.navigation(PAGES, position="sidebar")
+sidebar_footer()
+page.run()

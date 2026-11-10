@@ -58,7 +58,8 @@ def test_nearest_graph() -> None:
 
 @pytest.mark.skipif(not (PROJECT_ROOT / CFG["paths"]["dataset"]).exists(),
                     reason="needs data/dataset.csv")
-@pytest.mark.parametrize("page", [None, "views/algorithm_map.py", "views/road_network.py"])
+@pytest.mark.parametrize("page", [None, "views/algorithm_map.py", "views/road_network.py",
+                                  "views/results.py"])
 def test_app_pages_run_without_errors(page: str | None) -> None:
     from streamlit.testing.v1 import AppTest
 

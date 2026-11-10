@@ -1,18 +1,26 @@
 [browser]
 gatherUsageStats = false
 
-# The app opens in this light theme. Viewers can still switch to dark in the app menu
-# (top right -> Settings); the custom page elements adapt to either.
+# Light theme from the redesign mock-ups: grey page, white panels, dark navy sidebar.
 [theme]
 base = "light"
-primaryColor = "#0f766e"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f3f4f6"
-textColor = "#111827"
-borderColor = "#e5e7eb"
-font = "sans-serif"
-headingFont = "sans-serif"
-headingFontWeights = [700, 650, 600]
-headingFontSizes = ["2.1rem", "1.5rem", "1.15rem"]
-baseRadius = "0.5rem"
+primaryColor = "#1B2230"
+backgroundColor = "#EDEFF3"
+secondaryBackgroundColor = "#E7EAEF"
+textColor = "#171C26"
+borderColor = "#BFC6D0"
+linkColor = "#0072B2"
+font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+headingFont = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+headingFontWeights = [600, 600, 600]
+headingFontSizes = ["22px", "16px", "14px"]
+baseFontSize = 14
+baseRadius = "4px"
 showWidgetBorder = true
+
+[theme.sidebar]
+backgroundColor = "#1B2230"
+secondaryBackgroundColor = "#2A3345"
+textColor = "#C6CCD8"
+borderColor = "#2F384A"
+primaryColor = "#FFFFFF"
