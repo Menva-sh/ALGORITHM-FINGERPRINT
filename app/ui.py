@@ -46,12 +46,13 @@ FEATURE_NAMES = {"n_nodes": "Number of nodes", "n_edges": "Number of edges", "de
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
-:root{--ink:#080808;--ink2:#444444;--mute:#666666;--line:#E8E8E8;--grid:#EDEDED;--axis:#C8C8C8;
+:root{--ink:#080808;--ink2:#444444;--mute:#666666;--line:#DADAD5;--grid:#E6E6E1;--axis:#C8C8C8;
   --panel:#FFFFFF;--side:#080808;--ok:#4E5A36;--bad:#B42318;--cream:#EAEAC6;--moss:#4E5A36;
-  --ring:0 0 0 1px #E8E8E8;--mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  --ring:0 0 0 1px #D2D2CC,0 2px 6px rgba(8,8,8,.07);--mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
   --c-dij:#0072B2;--c-bdij:#56B4E9;--c-bfs:#E69F00;--c-bbfs:#D55E00;--c-astar:#009E73}
 .block-container{max-width:1240px;padding:4.4rem 28px 2.5rem}
-[data-testid="stHeader"]{background:#F8F8F8;border-bottom:1px solid var(--line)}
+[data-testid="stHeader"]{background:#FFFFFF;border-bottom:1px solid var(--line)}
+[data-testid="stMainBlockContainer"]>[data-testid="stVerticalBlock"]{gap:1.4rem}
 h1{font-size:30px!important;line-height:1.15!important;font-weight:500!important;
   letter-spacing:-.03em!important;padding:0!important}
 .lead{font-size:15px;color:var(--ink2);margin:6px 0 0;max-width:820px}
@@ -62,6 +63,7 @@ h1{font-size:30px!important;line-height:1.15!important;font-weight:500!important
 .st-key-panel_input{padding-top:16px}
 [class*="st-key-panel"] .stats{margin:0 -20px -16px}
 .panel{display:flex;flex-direction:column;height:100%;overflow:hidden}
+[class*="st-key-gap"]{padding-bottom:.9rem}
 .ph{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;
   border-bottom:1px solid var(--grid);min-height:48px}
 .ph h2,[class*="st-key-ph"] h2{font-family:var(--mono);font-size:11.5px!important;font-weight:500;
@@ -116,6 +118,7 @@ h1{font-size:30px!important;line-height:1.15!important;font-weight:500!important
   border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase}
 .tb td{padding:6px 0;border-bottom:1px solid var(--grid)}
 .tb .n,.bk .n{text-align:right}
+.tb.roomy th{padding:8px 0}.tb.roomy td{padding:11px 0}
 .ctb{background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--ring);border-collapse:separate;
   border-spacing:0}
 .ctb th{padding:10px 14px;background:#fff}.ctb td{padding:10px 14px;background:#fff}

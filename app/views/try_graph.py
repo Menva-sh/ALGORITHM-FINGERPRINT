@@ -6,15 +6,38 @@ import json
 import streamlit as st
 
 from app import ui
+from src.algorithms import ALGORITHMS
+from src.config import PROJECT_ROOT
 from src.demo_logic import NAMES, reason
 from src.inputs import FILE_TYPES, SAMPLE_MAZE, UnsupportedInput
+from src.viz import graph_svg, layout
 
 CFG = ui.CFG
 fams = CFG["generation"]["families"]
 EXAMPLES = ui.STATIC.parent / "examples"
-READY = [("social_network.graphml", "Social network"),
-         ("warehouses_distance_matrix.csv", "Warehouses"),
-         ("city_roads_edge_list.csv", "Neighbourhood roads")]  # one per input type
+ROAD = PROJECT_ROOT / CFG["paths"]["real_graphs"] / "road_piedmont"
+# Ready-made inputs, one per kind of graph: key -> (label, edge file, coordinate file, blurb)
+READY = {
+    "weighted": ("Weighted", EXAMPLES / "weighted_network.csv", None,
+                 "A road-style network: a distance on every road, no map positions."),
+    "unweighted": ("Unweighted", EXAMPLES / "unweighted_network.txt", None,
+                   "A social-style network: every link counts the same, no map positions."),
+    "coordinates": ("With coordinates", ROAD.with_suffix(".edges"), ROAD.with_suffix(".coords"),
+                    "A real road map (Piedmont, California, from OpenStreetMap): distances "
+                    "and map positions."),
+}
+PREVIEW_LINES = 14
+
+
+def preview(text: str, name: str) -> None:
+    """Show the first lines of an input file, so the audience can see what the graph is made of."""
+    lines = text.splitlines()
+    st.markdown(f"<p class='mono' style='margin:0 0 6px'>{ui.esc(name)} · {len(lines):,} lines</p>",
+                unsafe_allow_html=True)
+    more = len(lines) - PREVIEW_LINES
+    st.code("\n".join(lines[:PREVIEW_LINES]) + (f"\n... {more:,} more lines" if more > 0 else ""),
+            language=None)
+
 
 top = st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="bottom")
 with top:
@@ -39,6 +62,7 @@ with st.container(key="panel_input"):
     qtext, qmore, qbtn = st.columns([3.2, 0.75, 0.85], gap="small", vertical_alignment="center")
     fixed_query = None
     labels = None
+    source_text = source_name = extra_text = None
 
     if mode == "Generate":
         family = first[1].selectbox("Graph type", list(fams), format_func=ui.FAMILY_NAMES.get)
@@ -58,32 +82,36 @@ with st.container(key="panel_input"):
         source_note = f"{ui.FAMILY_NAMES[family].split(' (')[-1].rstrip(')')} graph"
 
     elif mode == "Ready-made or upload":
-        u1, u2 = body.columns([1.4, 1], gap="large")
+        chosen = st.session_state.get("ready_key", "weighted")
+        ready_row = body.container(horizontal=True, gap="small", vertical_alignment="center")
+        ready_row.markdown("<span class='mono'>Ready-made inputs</span>", unsafe_allow_html=True)
+        u1, u2 = body.columns([1.4, 1], gap="medium")
         with u1:
-            ready_row = st.container(horizontal=True, gap="small")
             up = st.file_uploader("Or upload your own graph file", type=FILE_TYPES,
                                   help="Edge list (u v [distance]), distance matrix (CSV), "
                                        "GraphML, GML or node-link JSON.")
+        with u2:
             cup = st.file_uploader("Coordinates (optional): one 'node x y' per line",
                                    type=["txt", "csv", "coords"])
-        with u2:
-            st.markdown("**Accepted formats**\n\n"
-                        "- **Edge list**: `A B 4` per line (distance optional)\n"
+        for key, (label, *_rest) in READY.items():
+            ready_row.button(label, key=f"ready_{key}",
+                             type="primary" if key == chosen and up is None else "secondary",
+                             on_click=lambda k=key: st.session_state.update(ready_key=k))
+        if up is not None:
+            fname, data, coords_text = up.name, up.getvalue(), None
+            note_txt = "Your uploaded file."
+        else:
+            _, epath, cpath, note_txt = READY[chosen]
+            fname, data = epath.name, epath.read_bytes()
+            coords_text = cpath.read_text(encoding="utf-8") if cpath else None
+        if cup is not None:
+            coords_text = cup.getvalue().decode("utf-8-sig")
+        body.markdown(f"<p class='sub' style='margin:0'>{ui.esc(note_txt)}</p>", unsafe_allow_html=True)
+        with body.expander("Accepted formats, and what kind of problem fits"):
+            st.markdown("- **Edge list**: `A B 4` per line (distance optional)\n"
                         "- **Distance matrix**: square CSV table, 0 = no road\n"
                         "- **GraphML / GML / JSON**: from Gephi, networkx, yEd...")
             ui.md(FITS)
-        # Ready-made inputs: the example files, one click instead of an upload.
-        chosen = st.session_state.get("ready_file", READY[0][0])
-        ready_row.markdown("<span class='sub'>Ready-made inputs:</span>", unsafe_allow_html=True)
-        for fname, label in READY:
-            ready_row.button(label, key=f"ready_{fname}", type="primary" if fname == chosen
-                             and up is None else "secondary",
-                             on_click=lambda f=fname: st.session_state.update(ready_file=f))
-        if up is not None:
-            fname, data = up.name, up.getvalue()
-        else:
-            fname, data = chosen, (EXAMPLES / chosen).read_bytes()
-        coords_text = cup.getvalue().decode("utf-8-sig") if cup else None
         try:
             parsed = ui.parsed_upload(fname, data, coords_text)
         except UnsupportedInput as e:
@@ -92,6 +120,8 @@ with st.container(key="panel_input"):
         g, labels = parsed.graph, parsed.labels
         graph_key = ("upload", fname, hash(data), hash(coords_text))
         source_note = f"{fname} ({parsed.fmt})"
+        source_text, source_name = data.decode("utf-8-sig", errors="replace"), fname
+        extra_text = coords_text
         for note in parsed.notes:
             body.warning(note)
 
@@ -112,6 +142,7 @@ with st.container(key="panel_input"):
         fixed_query = (parsed.source, parsed.target)
         graph_key = ("maze", hash(text))
         source_note = "Your maze"
+        source_text, source_name = text, "maze"
 
     # ---- query
     if fixed_query:
@@ -151,29 +182,52 @@ choice = rec["choice"]
 st.session_state["your_graph"] = f  # shown on the algorithm map
 st.session_state["your_choice"] = choice
 
-# ------------------------------------------------------------------ prediction, why, fingerprint
-p_col, w_col, f_col = st.columns(3, gap="small")
+# ------------------------------------------------------------------ the input, made viewable
+_, path, _ = ALGORITHMS[choice](g, s, t)
+positions = st.session_state.setdefault("positions", {})
+if graph_key not in positions:
+    positions.clear()
+    positions[graph_key] = layout(g)
+with st.container(key="panel_view"):
+    head = ui.panel_head("view", "Your graph", f"{g.n:,} nodes, {g.m:,} edges, "
+                         f"{'weighted' if g.weighted else 'unweighted'}"
+                         f"{', with map coordinates' if g.has_coordinates else ''}")
+    pic, txt = st.columns([1.6, 1], gap="large") if source_text else (st.container(), None)
+    with pic:
+        ui.md(graph_svg(g, positions[graph_key], s, t, path, label=f"{source_note}: shortest path "
+                        f"from {name(s)} to {name(t)}"))
+        ui.md("<p class='sub' style='margin:8px 0 0'>Filled dot: start. Open dot: end. Blue line: "
+              f"the shortest path, found by {ui.esc(NAMES[choice])}.</p>")
+    if txt is not None:
+        with txt:
+            preview(source_text, source_name)
+            if extra_text:
+                preview(extra_text, "coordinates")
 
-p_col.markdown(ui.panel("Prediction", (
-    "<div style='display:flex;align-items:flex-start;justify-content:space-between;gap:12px'>"
-    f"<div style='display:flex;flex-direction:column;gap:6px'><div style='display:flex;"
-    f"align-items:center;gap:10px'>{ui.glyph(choice, 15)}<span class='big'>{ui.esc(NAMES[choice])}"
-    f"</span></div><p style='font-size:13.5px;color:var(--ink2);margin:0;max-width:260px'>"
-    f"{ui.esc(reason(choice, f))}</p></div>"
-    "<div style='text-align:right'><div class='sub'>Confidence</div><div style='font-size:28px;"
-    f"line-height:1.1;font-weight:600'>{rec['confidence']:.0%}</div></div></div>"
-    + ui.prob_rows(rec["probs"])), "Made before any search runs", min_height=300),
-    unsafe_allow_html=True)
+# ------------------------------------------------------------------ prediction, why, fingerprint
+pred_html = (
+    "<div style='display:flex;align-items:flex-start;justify-content:space-between;gap:24px;"
+    "flex-wrap:wrap'><div style='display:flex;flex-direction:column;gap:8px;max-width:560px'>"
+    f"<div style='display:flex;align-items:center;gap:10px'>{ui.glyph(choice, 16)}"
+    f"<span class='big'>{ui.esc(NAMES[choice])}</span></div>"
+    f"<p style='font-size:14px;color:var(--ink2);margin:0'>{ui.esc(reason(choice, f))}</p></div>"
+    "<div style='text-align:right'><div class='sub'>Confidence</div><div style='font-size:32px;"
+    f"line-height:1.1;font-weight:500'>{rec['confidence']:.0%}</div></div></div>"
+    + ui.prob_rows(rec["probs"]))
+with st.container(key="gap_pred"):
+    st.markdown(ui.panel("Prediction", pred_html, "Made before any search runs"),
+                unsafe_allow_html=True)
 
 shap = rec["shap"].reindex(rec["shap"].abs().sort_values(ascending=False).index)
-w_col.markdown(ui.panel("Why this prediction", ui.hbars(
-    [{"label": ui.esc(ui.FEATURE_NAMES.get(k, k)), "value": float(v),
-      "color": ui.COLORS[choice] if v >= 0 else ui.NEG} for k, v in shap.items()],
-    label_w=116, fmt="{:+.2f}"), f"SHAP value toward {NAMES[choice]}", min_height=300),
-    unsafe_allow_html=True)
+why_html = ui.hbars([{"label": ui.esc(ui.FEATURE_NAMES.get(k, k)), "value": float(v),
+                      "color": ui.COLORS[choice] if v >= 0 else ui.NEG}
+                     for k, v in shap.items()], label_w=170, fmt="{:+.2f}")
+with st.container(key="gap_why"):
+    st.markdown(ui.panel("Why this prediction", why_html, f"SHAP value toward {NAMES[choice]}"),
+                unsafe_allow_html=True)
 
-with f_col.container(key="panel_fp", height="stretch"):
-    head = ui.panel_head("fp", "Fingerprint")
+with st.container(key="panel_fp"):
+    head = ui.panel_head("fp", "Fingerprint", "What the selector can see about this graph")
     with head.popover("All features"):
         st.dataframe([{"tier": f"T{tier}", "feature": nm, "value": f[nm]}
                       for tier in [0, 1, 2] for nm in CFG["features"]["tiers"][tier]],
@@ -184,7 +238,7 @@ with f_col.container(key="panel_fp", height="stretch"):
             ("Mean degree", f"{f['deg_mean']:.2f}", 1)]
     cost = ", ".join(f"T{k} {v / 1e3:,.1f} µs" for k, v in fp.tier_cost_ns.items())
     used = "+".join(f"T{t}" for t in CFG["model"]["feature_tiers"])
-    ui.md("<table class='tb'><thead><tr><th>Feature</th><th class='n'>Value</th>"
+    ui.md("<table class='tb roomy'><thead><tr><th>Feature</th><th class='n'>Value</th>"
           "<th class='n'>Tier</th></tr></thead><tbody>"
           + "".join(f"<tr><td>{k}</td><td class='n'>{v}</td><td class='n'>T{t}</td></tr>"
                     for k, v, t in rows)

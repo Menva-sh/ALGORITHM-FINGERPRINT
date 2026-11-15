@@ -74,10 +74,11 @@ def test_app_pages_run_without_errors(page: str | None) -> None:
 
 @pytest.mark.skipif(not (PROJECT_ROOT / CFG["paths"]["dataset"]).exists(),
                     reason="needs data/dataset.csv")
-@pytest.mark.parametrize("ready", ["social_network.graphml", "warehouses_distance_matrix.csv",
-                                   "city_roads_edge_list.csv"])
-def test_ready_made_inputs_need_no_upload(ready: str) -> None:
-    """Each ready-made input is one click on the Try a graph page and gives a full result."""
+@pytest.mark.parametrize("ready, weighted, coords", [("weighted", True, False),
+                                                     ("unweighted", False, False),
+                                                     ("coordinates", True, True)])
+def test_ready_made_inputs_need_no_upload(ready: str, weighted: bool, coords: bool) -> None:
+    """Each kind of graph is one click on Try a graph and gives a full, viewable result."""
     from streamlit.testing.v1 import AppTest
 
     at = AppTest.from_file(str(PROJECT_ROOT / "app" / "demo.py"), default_timeout=300)
@@ -85,9 +86,10 @@ def test_ready_made_inputs_need_no_upload(ready: str) -> None:
     at.switch_page("views/try_graph.py").run()
     assert not at.exception, [e.value for e in at.exception]
     assert [b.key for b in at.button if b.key and b.key.startswith("ready_")] == [
-        "ready_social_network.graphml", "ready_warehouses_distance_matrix.csv",
-        "ready_city_roads_edge_list.csv"]
+        "ready_weighted", "ready_unweighted", "ready_coordinates"]
     next(b for b in at.button if b.key == f"ready_{ready}").click().run()
     assert not at.exception, [e.value for e in at.exception]
-    assert any(ready in m.value for m in at.markdown)  # the result names the file it used
-    assert any("Figure 1." in m.value for m in at.markdown)
+    text = " ".join(m.value for m in at.markdown)
+    assert f"{'weighted' if weighted else 'unweighted'}{', with map coordinates' if coords else ''}" in text
+    assert "<svg" in text and "Figure 1." in text  # the graph is drawn and the race ran
+    assert at.code and "more lines" in at.code[0].value  # the input file is shown
