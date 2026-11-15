@@ -10,7 +10,7 @@ from src.algorithms import ALGORITHMS
 from src.config import PROJECT_ROOT
 from src.demo_logic import NAMES, reason
 from src.inputs import FILE_TYPES, SAMPLE_MAZE, UnsupportedInput
-from src.viz import graph_svg, layout
+from src.viz import CAP, graph_svg, layout, path_view
 
 CFG = ui.CFG
 fams = CFG["generation"]["families"]
@@ -184,20 +184,36 @@ st.session_state["your_choice"] = choice
 
 # ------------------------------------------------------------------ the input, made viewable
 _, path, _ = ALGORITHMS[choice](g, s, t)
-positions = st.session_state.setdefault("positions", {})
-if graph_key not in positions:
-    positions.clear()
-    positions[graph_key] = layout(g)
+positions = st.session_state.setdefault("positions", {})  # layouts of big graphs
 with st.container(key="panel_view"):
     head = ui.panel_head("view", "Your graph", f"{g.n:,} nodes, {g.m:,} edges, "
                          f"{'weighted' if g.weighted else 'unweighted'}"
                          f"{', with map coordinates' if g.has_coordinates else ''}")
     pic, txt = st.columns([1.6, 1], gap="large") if source_text else (st.container(), None)
     with pic:
-        ui.md(graph_svg(g, positions[graph_key], s, t, path, label=f"{source_note}: shortest path "
-                        f"from {name(s)} to {name(t)}"))
-        ui.md("<p class='sub' style='margin:8px 0 0'>Filled dot: start. Open dot: end. Blue line: "
-              f"the shortest path, found by {ui.esc(NAMES[choice])}.</p>")
+        view = "Around the path"
+        if g.n > CAP:  # too many nodes to label them all: offer the whole graph as small dots
+            view = st.segmented_control("View", ["Around the path", "Whole graph"],
+                                        default=view, key="graph_view") or view
+        if view == "Around the path":
+            svg, shown, numbered = path_view(g, path, labels)
+            ui.md(svg)
+            more = (f" Showing {shown} of {g.n:,} nodes: the path and its nearest neighbours."
+                    if shown < g.n else "")
+            ui.md("<p class='sub' style='margin:8px 0 0'>Circles are nodes and lines are edges"
+                  + (", numbers are distances" if g.weighted else ", every edge counts as 1")
+                  + (", positions are the real map coordinates" if g.has_coordinates else "")
+                  + f". Blue: the shortest path, found by {ui.esc(NAMES[choice])}.{more}"
+                  + (" Nodes are numbered; hover one for its real id." if numbered else "")
+                  + "</p>")
+        else:
+            if graph_key not in positions:
+                positions.clear()
+                positions[graph_key] = layout(g)
+            ui.md(graph_svg(g, positions[graph_key], s, t, path,
+                            label=f"{source_note}: shortest path from {name(s)} to {name(t)}"))
+            ui.md("<p class='sub' style='margin:8px 0 0'>The whole graph, nodes too many to "
+                  "label. Filled dot: start. Open dot: end. Blue line: the shortest path.</p>")
     if txt is not None:
         with txt:
             preview(source_text, source_name)
