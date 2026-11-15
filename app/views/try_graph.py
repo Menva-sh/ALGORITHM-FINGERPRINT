@@ -11,6 +11,10 @@ from src.inputs import FILE_TYPES, SAMPLE_MAZE, UnsupportedInput
 
 CFG = ui.CFG
 fams = CFG["generation"]["families"]
+EXAMPLES = ui.STATIC.parent / "examples"
+READY = [("social_network.graphml", "Social network"),
+         ("warehouses_distance_matrix.csv", "Warehouses"),
+         ("city_roads_edge_list.csv", "Neighbourhood roads")]  # one per input type
 
 top = st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="bottom")
 with top:
@@ -25,9 +29,10 @@ FITS = ("<p class='sub'><b>Fits:</b> the shortest route between two points in a 
 
 # ------------------------------------------------------------------ graph input panel
 with st.container(key="panel_input"):
-    first = st.columns([1.35, 1.15, 1, 1.25], gap="medium", vertical_alignment="bottom")
-    mode = first[0].segmented_control("Graph source", ["Generate", "Upload file", "Draw a maze"],
-                                      default="Generate", key="input_mode") or "Generate"
+    first = st.columns([2.1, 1.1, 1, 1.15], gap="medium", vertical_alignment="bottom")
+    mode = first[0].segmented_control("Graph source", ["Ready-made or upload", "Generate", "Draw a maze"],
+                                      default="Ready-made or upload", key="input_mode"
+                                      ) or "Ready-made or upload"
     body = st.container()
     st.markdown("<div style='border-top:1px solid var(--grid);margin:2px 0 0'></div>",
                 unsafe_allow_html=True)
@@ -52,10 +57,11 @@ with st.container(key="panel_input"):
         graph_key = (family, n, params, weights, int(rep))
         source_note = f"{ui.FAMILY_NAMES[family].split(' (')[-1].rstrip(')')} graph"
 
-    elif mode == "Upload file":
+    elif mode == "Ready-made or upload":
         u1, u2 = body.columns([1.4, 1], gap="large")
         with u1:
-            up = st.file_uploader("Graph file", type=FILE_TYPES,
+            ready_row = st.container(horizontal=True, gap="small")
+            up = st.file_uploader("Or upload your own graph file", type=FILE_TYPES,
                                   help="Edge list (u v [distance]), distance matrix (CSV), "
                                        "GraphML, GML or node-link JSON.")
             cup = st.file_uploader("Coordinates (optional): one 'node x y' per line",
@@ -66,23 +72,26 @@ with st.container(key="panel_input"):
                         "- **Distance matrix**: square CSV table, 0 = no road\n"
                         "- **GraphML / GML / JSON**: from Gephi, networkx, yEd...")
             ui.md(FITS)
-            ex_row = st.container(horizontal=True, gap="small")
-            for ex in sorted((ui.STATIC.parent / "examples").glob("*.*")):
-                ex_row.download_button(ex.name, ex.read_bytes(), file_name=ex.name,
-                                       key=f"dl_{ex.name}", type="tertiary",
-                                       icon=":material/download:")
-        if up is None:
-            qtext.info("Upload a file to continue, or download an example file first.")
-            st.stop()
+        # Ready-made inputs: the example files, one click instead of an upload.
+        chosen = st.session_state.get("ready_file", READY[0][0])
+        ready_row.markdown("<span class='sub'>Ready-made inputs:</span>", unsafe_allow_html=True)
+        for fname, label in READY:
+            ready_row.button(label, key=f"ready_{fname}", type="primary" if fname == chosen
+                             and up is None else "secondary",
+                             on_click=lambda f=fname: st.session_state.update(ready_file=f))
+        if up is not None:
+            fname, data = up.name, up.getvalue()
+        else:
+            fname, data = chosen, (EXAMPLES / chosen).read_bytes()
         coords_text = cup.getvalue().decode("utf-8-sig") if cup else None
         try:
-            parsed = ui.parsed_upload(up.name, up.getvalue(), coords_text)
+            parsed = ui.parsed_upload(fname, data, coords_text)
         except UnsupportedInput as e:
             qtext.error(f"**This input can't be used.** {e}")
             st.stop()
         g, labels = parsed.graph, parsed.labels
-        graph_key = ("upload", up.name, hash(up.getvalue()), hash(coords_text))
-        source_note = f"{up.name} ({parsed.fmt})"
+        graph_key = ("upload", fname, hash(data), hash(coords_text))
+        source_note = f"{fname} ({parsed.fmt})"
         for note in parsed.notes:
             body.warning(note)
 

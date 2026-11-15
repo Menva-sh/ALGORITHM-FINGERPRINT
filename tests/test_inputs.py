@@ -88,6 +88,8 @@ def test_app_runs_in_maze_mode() -> None:
     from streamlit.testing.v1 import AppTest
 
     at = AppTest.from_file(str(PROJECT_ROOT / "app" / "demo.py"), default_timeout=300)
+    at.run()
+    at.switch_page("views/try_graph.py").run()
     at.session_state["input_mode"] = "Draw a maze"
     at.run()
     assert not at.exception, [e.value for e in at.exception]

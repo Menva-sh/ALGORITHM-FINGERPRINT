@@ -1,10 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40">
-  <rect x="0" y="5" width="30" height="30" rx="6" fill="#2A3345"/>
-  <g fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" transform="translate(0 5)">
-    <path d="M8 17c0-4 3-7 7-7s7 3 7 7"/>
-    <path d="M11 19.5c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/>
-    <path d="M15 22.5v-4"/>
-  </g>
-  <text x="40" y="18" font-family="'IBM Plex Sans','Segoe UI',system-ui,sans-serif" font-size="15" font-weight="600" fill="#FFFFFF">Algorithm Fingerprint</text>
-  <text x="40" y="34" font-family="'IBM Plex Sans','Segoe UI',system-ui,sans-serif" font-size="10.5" fill="#8A94A6">Shortest-path algorithm selector</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="190" height="40" viewBox="0 0 190 40">
+  <circle cx="15" cy="20" r="13" fill="#080808"/>
+  <circle cx="15" cy="20" r="5.5" fill="#EAEAC6"/>
+  <text x="38" y="25" font-family="Inter,'Segoe UI',system-ui,sans-serif" font-size="15" font-weight="500" fill="#080808">Algorithm Fingerprint</text>
 </svg>

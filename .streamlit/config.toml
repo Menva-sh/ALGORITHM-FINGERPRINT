@@ -1,26 +1,21 @@
 [browser]
 gatherUsageStats = false
 
-# Light theme from the redesign mock-ups: grey page, white panels, dark navy sidebar.
+# Light theme in the style of The Original Green: off-white page, near-black ink, white cards,
+# one cream accent. Cards, pills and labels are styled in app/ui.py.
 [theme]
 base = "light"
-primaryColor = "#1B2230"
-backgroundColor = "#EDEFF3"
-secondaryBackgroundColor = "#E7EAEF"
-textColor = "#171C26"
-borderColor = "#BFC6D0"
-linkColor = "#0072B2"
-font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-headingFont = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-headingFontWeights = [600, 600, 600]
-headingFontSizes = ["22px", "16px", "14px"]
+primaryColor = "#080808"
+backgroundColor = "#F8F8F8"
+secondaryBackgroundColor = "#E8E8E8"
+textColor = "#080808"
+borderColor = "#C8C8C8"
+linkColor = "#4E5A36"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+headingFontWeights = [500, 500, 500]
+headingFontSizes = ["30px", "16px", "14px"]
 baseFontSize = 14
-baseRadius = "4px"
+baseRadius = "medium"
 showWidgetBorder = true
-
-[theme.sidebar]
-backgroundColor = "#1B2230"
-secondaryBackgroundColor = "#2A3345"
-textColor = "#C6CCD8"
-borderColor = "#2F384A"
-primaryColor = "#FFFFFF"

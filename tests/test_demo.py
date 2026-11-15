@@ -58,8 +58,8 @@ def test_nearest_graph() -> None:
 
 @pytest.mark.skipif(not (PROJECT_ROOT / CFG["paths"]["dataset"]).exists(),
                     reason="needs data/dataset.csv")
-@pytest.mark.parametrize("page", [None, "views/algorithm_map.py", "views/road_network.py",
-                                  "views/results.py"])
+@pytest.mark.parametrize("page", [None, "views/try_graph.py", "views/algorithm_map.py",
+                                  "views/road_network.py", "views/results.py"])
 def test_app_pages_run_without_errors(page: str | None) -> None:
     from streamlit.testing.v1 import AppTest
 
@@ -70,3 +70,24 @@ def test_app_pages_run_without_errors(page: str | None) -> None:
         at.switch_page(page).run()
         assert not at.exception, [e.value for e in at.exception]
     assert any("<h1>" in m.value for m in at.markdown)
+
+
+@pytest.mark.skipif(not (PROJECT_ROOT / CFG["paths"]["dataset"]).exists(),
+                    reason="needs data/dataset.csv")
+@pytest.mark.parametrize("ready", ["social_network.graphml", "warehouses_distance_matrix.csv",
+                                   "city_roads_edge_list.csv"])
+def test_ready_made_inputs_need_no_upload(ready: str) -> None:
+    """Each ready-made input is one click on the Try a graph page and gives a full result."""
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(str(PROJECT_ROOT / "app" / "demo.py"), default_timeout=300)
+    at.run()
+    at.switch_page("views/try_graph.py").run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert [b.key for b in at.button if b.key and b.key.startswith("ready_")] == [
+        "ready_social_network.graphml", "ready_warehouses_distance_matrix.csv",
+        "ready_city_roads_edge_list.csv"]
+    next(b for b in at.button if b.key == f"ready_{ready}").click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert any(ready in m.value for m in at.markdown)  # the result names the file it used
+    assert any("Figure 1." in m.value for m in at.markdown)
