@@ -93,3 +93,55 @@ def test_ready_made_inputs_need_no_upload(ready: str, weighted: bool, coords: bo
     assert f"{'weighted' if weighted else 'unweighted'}{', with map coordinates' if coords else ''}" in text
     assert "<svg" in text and "Figure 1." in text  # the graph is drawn and the race ran
     assert at.code and "more lines" in at.code[0].value  # the input file is shown
+
+
+def _try_a_graph():
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(str(PROJECT_ROOT / "app" / "demo.py"), default_timeout=300)
+    at.run()
+    at.switch_page("views/try_graph.py").run()
+    assert not at.exception, [e.value for e in at.exception]
+    return at
+
+
+def _dropdowns(at):
+    return {sb.label: sb for sb in at.selectbox if sb.label in ("Start node", "End node")}
+
+
+@pytest.mark.skipif(not (PROJECT_ROOT / CFG["paths"]["dataset"]).exists(),
+                    reason="needs data/dataset.csv")
+def test_start_and_end_come_from_dropdowns() -> None:
+    from src.inputs import parse_file
+
+    at = _try_a_graph()
+    boxes = _dropdowns(at)
+    assert set(boxes) == {"Start node", "End node"}
+    boxes["Start node"].select_index(3)
+    boxes["End node"].select_index(7)
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    labels = parse_file("weighted_network.csv",
+                        (PROJECT_ROOT / "app" / "examples" / "weighted_network.csv").read_bytes()).labels
+    assert any(f"Query: {labels[3]} to {labels[7]}." in m.value for m in at.markdown)
+
+    boxes = _dropdowns(at)  # the same node twice is refused with a message, not a crash
+    boxes["Start node"].select_index(5)
+    boxes["End node"].select_index(5)
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert any("Choose two different nodes" in e.value for e in at.error)
+
+
+@pytest.mark.skipif(not (PROJECT_ROOT / CFG["paths"]["dataset"]).exists(),
+                    reason="needs data/dataset.csv")
+def test_dropdowns_on_generated_graphs_but_not_for_the_fixed_maze() -> None:
+    at = _try_a_graph()
+    at.session_state["input_mode"] = "Generate"
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert set(_dropdowns(at)) == {"Start node", "End node"}
+    at.session_state["input_mode"] = "Draw a maze"
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert _dropdowns(at) == {}  # the maze fixes S and T

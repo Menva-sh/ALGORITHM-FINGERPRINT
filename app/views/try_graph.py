@@ -59,7 +59,9 @@ with st.container(key="panel_input"):
     body = st.container()
     st.markdown("<div style='border-top:1px solid var(--grid);margin:2px 0 0'></div>",
                 unsafe_allow_html=True)
-    qtext, qmore, qbtn = st.columns([3.2, 0.75, 0.85], gap="small", vertical_alignment="center")
+    qtext = st.container()
+    qsel1, qsel2, qmore, qbtn = st.columns([1.5, 1.5, 0.8, 0.9], gap="small",
+                                           vertical_alignment="bottom")
     fixed_query = None
     labels = None
     source_text = source_name = extra_text = None
@@ -144,7 +146,8 @@ with st.container(key="panel_input"):
         source_note = "Your maze"
         source_text, source_name = text, "maze"
 
-    # ---- query
+    # ---- query: a random pair to start with, or pick the start and end from dropdowns
+    name = (lambda i: labels[i]) if labels is not None else (lambda i: f"node {i}")
     if fixed_query:
         s, t = fixed_query
     else:
@@ -154,20 +157,18 @@ with st.container(key="panel_input"):
         if query is None:
             qtext.error("No two nodes of this graph are connected, so there is no path to find.")
             st.stop()
-        s, t = query
-        if labels is not None:
-            with qmore.popover("Start and end", use_container_width=True):
-                index = {name: i for i, name in enumerate(labels)}
-                a_ = st.text_input("Start node", labels[s])
-                b_ = st.text_input("End node", labels[t])
-                if a_ in index and b_ in index and a_ != b_:
-                    s, t = index[a_], index[b_]
-                else:
-                    st.caption("Type two different node names from the file.")
+        # keys change with the graph and the random query, so a new query resets the dropdowns
+        kb = f"{abs(hash(graph_key)) % 10**8}_{st.session_state.get('try_seed', 0)}"
+        s = qsel1.selectbox("Start node", range(g.n), index=query[0], format_func=name,
+                            key=f"start_{kb}")
+        t = qsel2.selectbox("End node", range(g.n), index=query[1], format_func=name,
+                            key=f"end_{kb}")
+        if s == t:
+            qtext.error("Choose two different nodes.")
+            st.stop()
         if g.component_labels()[s] != g.component_labels()[t]:
             qtext.error("These two nodes are not connected: there is no path between them.")
             st.stop()
-    name = (lambda i: labels[i]) if labels is not None else (lambda i: f"node {i}")
     qtext.markdown(f"<p style='margin:0;color:var(--ink2)'><b style='color:var(--ink)'>Query: "
                    f"{ui.esc(name(s))} to {ui.esc(name(t))}.</b> {ui.esc(source_note)} with "
                    f"{g.n:,} nodes and {g.m:,} edges, "
